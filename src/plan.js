@@ -23,7 +23,7 @@ function arguments_(argv) {
   }
   return o;
 }
-const lire = (f, defaut) => (f ? JSON.parse(fs.readFileSync(f, 'utf8').replace(/^﻿/, '')) : defaut);
+const { lire } = require('./lire.js'); // fichier JSON ou dossier de documents (export ArtifactData)
 
 function main() {
   const a = arguments_(process.argv.slice(2));

@@ -1,6 +1,6 @@
 # linkedin-cmf : moteur d'acquisition LinkedIn CMF
 
-Version 9.0.2 (2026-11-11). Auteur : Laurent Sebah (CMF).
+Version 9.1.0 (2026-11-11). Auteur : Laurent Sebah (CMF).
 
 Scripts de la tâche planifiée « Prospection LinkedIn CMF ». La tâche se fait en deux temps :
 
@@ -33,7 +33,10 @@ Aucun script de ce dépôt n'envoie de message, d'invitation ou d'acceptation. L
 | `migration/appliquer_resolution.js` | Verse dans `suivi` les fiches dont l'URN vient d'être résolu. |
 | `schemas/*.schema.json` | Schémas de `suivi`, `collect` et `plan`. |
 | `dist/*.min.js` | Versions compactes à coller dans le navigateur (`npm run build`). |
-| `prompt/261111_prospection-linkedin-v9.md` | Prompt v9 de la tâche planifiée. |
+| `src/assembler.js` | Export brut de la page ► `collect.json` ; verse la file `aresoudre` dans `suivi`. |
+| `src/lire.js` | Lecture d'un fichier JSON ou d'un dossier de documents exportés par ArtifactData. |
+| `prompt/261111_prospection-linkedin-v9-code.md` | Prompt de la tâche planifiée dans l'application Claude Code (Chrome de Laurent, dépôt local). C'est celui qui est en service. |
+| `prompt/261111_prospection-linkedin-v9.md` | Variante pour une session Cowork (navigateur intégré, bac à sable). |
 | `test/` | Tests (Node et Python) et fixtures anonymisées. |
 
 ## Tests
@@ -42,7 +45,7 @@ Aucun script de ce dépôt n'envoie de message, d'invitation ou d'acceptation. L
 npm test
 ```
 
-49 tests Node (dont les 15 cas d'acceptation du brief) et 18 tests Python. Aucune dépendance à installer. Node 20 ou plus, Python 3.10 ou plus.
+50 tests Node (dont les 15 cas d'acceptation du brief) et 18 tests Python. Aucune dépendance à installer. Node 20 ou plus, Python 3.10 ou plus.
 
 ## Préparer un lot
 
@@ -80,13 +83,15 @@ await CMF.collect.run('threads', { urns: ['ACoA...'] })
 await CMF.collect.run('recherche', { requetes: ['Paul Durand Mutuelle X'] })
 ```
 
+Dans Chrome, le script se charge sans saisie : un champ de fichier créé par la routine reçoit `dist/collect.min.js` (outil `file_upload`), la page lit le fichier puis l'évalue dans un appel sans `await`. Les résultats restent dans la page et sortent par `CMF.collect.sortir(nom, objet)` (fichier JSON dans Téléchargements) ou, si Chrome bloque les téléchargements multiples, par `CMF.collect.tranches(objet, debut)`. La sortie de l'outil JavaScript de Chrome coupe les chaînes vers 1 000 caractères et masque les valeurs qui ressemblent à un jeton : n'y faire passer que des compteurs.
+
 Chaque appel renvoie `{ ok, etape, data, reste, alertes, duree, arret }`. `reste` non vide : rappeler la même étape avec `{ reste }`. `arret: true` : vérification, limite ou déconnexion détectée, tout arrêter.
 
 Garde-fous : 1,2 à 2,5 s entre requêtes, 60 profils et 20 recherches au plus par chargement, URN toujours extrait de la réponse, URN de Laurent (`ACoAAABb3LgB...`) signalé et écarté. Le jeton CSRF est lu dans la page à l'exécution et n'est ni renvoyé ni journalisé.
 
 ### Validation sur LinkedIn réel (faite le 2026-11-11)
 
-`dist/collect.min.js` (v9.0.2) a été collé tel quel dans un onglet LinkedIn connecté au compte de Laurent, en lecture seule :
+`dist/collect.min.js` (v9.1.0) a été collé tel quel dans un onglet LinkedIn connecté au compte de Laurent, en lecture seule :
 
 | Étape | Résultat |
 |---|---|

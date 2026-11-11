@@ -2,6 +2,7 @@
 /*
  * etat.js : met à jour l'état « suivi » hors navigateur (Node). Aucun appel réseau.
  *
+ *   Option --dossier <dossier> : écrit aussi un fichier <URN>.json par document (pour ArtifactData file_path).
  *   node src/etat.js fils   --suivi suivi.json --threads threads.json --quand 2026-11-12T07:35:00Z
  *       -> documents suivi à écrire après lecture des fils (fil mémorisé sans texte)
  *   node src/etat.js envoi  --suivi suivi.json --action action.json --quand 2026-11-12T08:31:00Z
@@ -16,7 +17,8 @@ const R = require('./rules.js');
 const a = {};
 const argv = process.argv.slice(3);
 for (let i = 0; i < argv.length; i += 2) a[argv[i].replace(/^--/, '')] = argv[i + 1];
-const lire = (f) => JSON.parse(fs.readFileSync(f, 'utf8').replace(/^\uFEFF/, ''));
+const path = require('node:path');
+const { lire } = require('./lire.js'); // fichier JSON ou dossier de documents (export ArtifactData)
 const index = (x) => {
   const o = {};
   (Array.isArray(x) ? x : Object.keys(x).map((k) => Object.assign({ urn: k }, x[k]))).forEach((d) => { o[d.urn || d.id] = d; });
@@ -35,5 +37,14 @@ try {
     const doc = suivi[action.urn] || null;
     sortie = { suivi: R.appliquerEnvoi(doc, action, a.quand), folk: R.evenementFolk(action, a.quand, doc || {}) };
   } else throw new Error('commande attendue : fils | envoi');
+  if (a.dossier) {
+    // Un fichier <URN>.json par document, prêt pour ArtifactData (file_path).
+    fs.mkdirSync(a.dossier, { recursive: true });
+    (Array.isArray(sortie) ? sortie : [sortie.suivi]).forEach((d) => {
+      const propre = Object.assign({}, d);
+      delete propre.id;
+      fs.writeFileSync(path.join(a.dossier, d.urn + '.json'), JSON.stringify(propre));
+    });
+  }
   process.stdout.write(JSON.stringify(sortie, null, 2) + '\n');
 } catch (e) { console.error('échec : ' + e.message); process.exit(1); }

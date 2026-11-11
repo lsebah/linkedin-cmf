@@ -11,7 +11,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (T, X) {
   'use strict';
 
-  var VERSION = '9.0.2';
+  var VERSION = '9.1.0';
 
   var DEFAUT = {
     plafonds: {

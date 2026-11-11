@@ -128,7 +128,9 @@ test('collect.js : aucune écriture réseau, aucun secret dans le code', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'collect.js'), 'utf8');
   assert.ok(!/method:\s*'(POST|PUT|PATCH|DELETE)'/i.test(src));
   assert.equal((src.match(/method:\s*'GET'/g) || []).length, 1); // un seul point d'accès réseau
-  assert.ok(!/\.click\(|\.submit\(|dispatchEvent|execCommand/.test(src)); // aucun clic ni saisie
+  assert.equal((src.match(/\.click\(/g) || []).length, 1); // un seul clic : le lien de téléchargement créé par sortir()
+  assert.ok(/lien\.click\(\)/.test(src));
+  assert.ok(!/\.submit\(|dispatchEvent|execCommand/.test(src)); // aucune soumission ni saisie
   assert.ok(!/li_at|password|Bearer /i.test(src));
 });
 
@@ -141,4 +143,34 @@ test('watch : slug tiré de l\'identifiant du document ; profil résolu par iden
   assert.equal(t.slug, 'carole-modele-0003');
   const accent = C.parseTopCard({ included: [{ entityUrn: 'urn:li:fsd_profile:ACoAAA555555FictifUrnEpsilon000000000000', publicIdentifier: 'bérengère-x', firstName: 'B', lastName: 'X' }] }, 'b%C3%A9reng%C3%A8re-x', 'ACoAAABb3LgB');
   assert.equal(accent.urn, 'ACoAAA555555FictifUrnEpsilon000000000000');
+});
+
+test('assembler : export brut de la page vers collect.json, file aresoudre versée dans suivi', () => {
+  const { assembler } = require('../src/assembler.js');
+  const U = (n) => 'ACoAAA' + n + 'FictifUrnPourAssembler0000000000';
+  const res = assembler({
+    date: AUJ,
+    suivi: [{ urn: U(1), slug: 'alice-fictive-0001' }],
+    file: { items: { per_a: { slug: 'bruno-exemple-0002', nom: 'Bruno Exemple', folkId: 'per_a', famille: 'inst', statutFolk: 'Lead' },
+      per_b: { slug: U(3), urn: U(3), nom: 'Carole Modèle', folkId: 'per_b', famille: 'dist' }, per_c: { slug: 'jamais-vu', folkId: 'per_c' } } },
+    marques: { 'denis-specimen-0004': { source: 'sourcing', famille: 'dist' } },
+    brut: {
+      conversations: { ok: true, data: { replies: [{ urn: U(1), nom: 'Alice Fictive', date: '2026-11-15T10:00:00.000Z', extrait: 'Bonjour' }], conversations: 20 } },
+      birthdays: { ok: true, data: [{ slug: 'alice-fictive-0001', nom: 'Alice Fictive', date: AUJ, urn: null }, { slug: 'eric-test', nom: 'Eric Test', date: AUJ, urn: null }, { slug: 'inconnu', nom: 'X Y', date: AUJ, urn: null }] },
+      annivProfils: [{ ok: true, data: [{ slug: 'eric-test', urn: U(5), etat: 'connecte' }] }],
+      profils: [{ ok: true, data: [{ slug: 'bruno-exemple-0002', urn: U(2), etat: 'connecte', distance: 1 }, { slug: 'carole-modele', urn: U(3), etat: 'attente', distance: 2 }] },
+        { ok: true, data: [{ slug: 'denis-specimen-0004', urn: U(4), etat: 'retire', distance: 2, invitable: true }] }],
+      threads: [{ ok: true, data: [{ urn: U(1), lu: true, messages: [] }] }, { ok: true, data: [{ urn: U(2), lu: false, motif: 'fil non lu' }] }]
+    }
+  });
+  assert.deepEqual(res.collect.birthdays.map((b) => b.urn), [U(1), U(5)]); // URN pris dans suivi, puis dans les profils
+  assert.deepEqual(res.sansUrn, ['inconnu']);
+  assert.equal(res.collect.threads.length, 2);
+  assert.deepEqual(res.collect.profiles.map((p) => [p.urn, p.source]), [[U(4), 'sourcing']]);
+  assert.deepEqual(res.nouveaux.map((d) => [d.urn, d.statut, d.famille]), [[U(2), 'connecte', 'inst'], [U(3), 'invite', 'dist']]);
+  assert.deepEqual(res.resolus, ['per_a', 'per_b']);
+  const p = R.construirePlan({ date: AUJ, sendlog: [], suivi: [{ urn: U(1), slug: 'alice-fictive-0001', nom: 'Alice Fictive' }].concat(res.nouveaux), collect: res.collect });
+  // Alice vient d'écrire : pas de souhait automatique, à traiter ; Eric reçoit le sien.
+  assert.deepEqual(p.plan.map((x) => x.urn), [U(5)]);
+  assert.ok(p.aTraiter.some((x) => x.urn === U(1) && /anniversaire/.test(x.motif)));
 });

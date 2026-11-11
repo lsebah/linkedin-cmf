@@ -24,7 +24,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (win) {
   'use strict';
 
-  var VERSION = '9.0.2';
+  var VERSION = '9.1.0';
 
   var CFG = {
     pauseMin: 1200, pauseMax: 2500,   // ms entre deux requêtes
@@ -591,5 +591,26 @@
     }
   }
 
-  return Object.assign({ run: run, etat: etat }, pur);
+  // ---------- Sortie des résultats vers le poste (aucun envoi vers LinkedIn ni vers un tiers) ----------
+
+  /* Enregistre un objet dans le dossier Téléchargements du poste (fichier JSON local). */
+  function sortir(nom, obj) {
+    var b = new win.Blob([JSON.stringify(obj)], { type: 'application/json' });
+    var lien = doc.createElement('a');
+    lien.href = win.URL.createObjectURL(b);
+    lien.download = String(nom).replace(/[^w.-]/g, '_');
+    doc.body.appendChild(lien);
+    lien.click(); // clic sur notre propre lien de téléchargement, jamais sur un élément de LinkedIn
+    lien.remove();
+    return lien.download;
+  }
+
+  /* Repli si le téléchargement est bloqué : le JSON découpé en morceaux courts, 80 par appel. */
+  function tranches(obj, debut) {
+    var texte = JSON.stringify(obj), i = debut || 0, morceaux = [];
+    for (; i < texte.length && morceaux.length < 80; i += 800) morceaux.push(texte.slice(i, i + 800));
+    return { total: texte.length, debut: debut || 0, suivant: i < texte.length ? i : null, morceaux: morceaux };
+  }
+
+  return Object.assign({ run: run, etat: etat, sortir: sortir, tranches: tranches }, pur);
 });
