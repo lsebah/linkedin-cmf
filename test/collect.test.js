@@ -124,3 +124,14 @@ test('collect.js : aucune écriture réseau, aucun secret dans le code', () => {
   assert.ok(!/\.click\(|\.submit\(|dispatchEvent|execCommand/.test(src)); // aucun clic ni saisie
   assert.ok(!/li_at|password|Bearer /i.test(src));
 });
+
+test('watch : slug tiré de l\'identifiant du document ; profil résolu par identifiant de membre', () => {
+  assert.equal(C.slugDeWatch({ id: 'b_C3_A9reng_C3_A8re-x-92720611' }), 'b%C3%A9reng%C3%A8re-x-92720611');
+  assert.equal(C.slugDeWatch({ id: 'ACwAAA2DoWUBFictif', slug: 'paul-x' }), 'paul-x');
+  assert.equal(C.slugDeWatch({ id: 'ACwAAA2DoWUBFictif000000' }), 'ACwAAA2DoWUBFictif000000');
+  const t = C.parseTopCard(fx('topcard_attente.json'), 'ACwAAA333333FictifIdMembre0000000000000', 'ACoAAABb3LgB');
+  assert.equal(t.urn, 'ACoAAA333333FictifUrnGamma00000000000000'); // élément principal de la réponse
+  assert.equal(t.slug, 'carole-modele-0003');
+  const accent = C.parseTopCard({ included: [{ entityUrn: 'urn:li:fsd_profile:ACoAAA555555FictifUrnEpsilon000000000000', publicIdentifier: 'bérengère-x', firstName: 'B', lastName: 'X' }] }, 'b%C3%A9reng%C3%A8re-x', 'ACoAAABb3LgB');
+  assert.equal(accent.urn, 'ACoAAA555555FictifUrnEpsilon000000000000');
+});

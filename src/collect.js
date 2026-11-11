@@ -53,6 +53,15 @@
     else { for (var k in o) parcourir(o[k], f, prof + 1); }
   }
 
+  function decoder(s) { try { return decodeURIComponent(String(s || '')); } catch (e) { return String(s || ''); } }
+  /* Slug d'un document watch : champ slug, sinon identifiant du document (« b_C3_A9reng_C3_A8re-x » = « b%C3%A9reng%C3%A8re-x »). */
+  function slugDeWatch(w) {
+    if (w.slug) return w.slug;
+    var id = String(w.id || '');
+    if (!id) return null;
+    return /^AC[ow]AA/.test(id) ? id : id.replace(/_([0-9A-F]{2})/g, '%$1');
+  }
+
   var RETRAITE_RE = /(^|[^a-z])(retraite(e|s|es)?|retired|ancien(ne|s|nes)?|ex-[a-z]|honoraire(s)?)($|[^a-z])/;
   function estRetraite(t) { return RETRAITE_RE.test(sansAccents(t).toLowerCase()); }
 
@@ -130,13 +139,22 @@
   function parseTopCard(json, slug, urnLaurent) {
     var brut = typeof json === 'string' ? json : JSON.stringify(json || {});
     var obj = typeof json === 'string' ? null : json;
-    var profil = null;
-    if (obj) parcourir(obj, function (o) {
-      if (!Array.isArray(o) && o.publicIdentifier && String(o.publicIdentifier).toLowerCase() === String(slug).toLowerCase() &&
-          /fsd_profile:ACoA/.test(String(o.entityUrn || ''))) { profil = o; return false; }
-    });
+    var profil = null, alertes = [];
+    var parId = /^AC[ow]AA[\w-]{10,}$/.test(String(slug)); // identifiant de membre à la place du slug public
+    var voulu = decoder(slug).toLowerCase();
+    if (obj) {
+      // Élément principal de la réponse : celui que la requête a résolu.
+      var d = obj.data && typeof obj.data === 'object' ? obj.data : obj;
+      var el = d['*elements'] || d.elements;
+      var principal = Array.isArray(el) && el.length ? urnProfil(typeof el[0] === 'string' ? el[0] : el[0].entityUrn) : null;
+      parcourir(obj, function (o) {
+        if (Array.isArray(o) || !/fsd_profile:ACoA/.test(String(o.entityUrn || '')) || !(o.firstName || o.publicIdentifier)) return;
+        var memeSlug = o.publicIdentifier && decoder(o.publicIdentifier).toLowerCase() === voulu;
+        if (parId ? urnProfil(o.entityUrn) === principal : memeSlug) { profil = o; return false; }
+      });
+      if (profil && principal && urnProfil(profil.entityUrn) !== principal) alertes.push('URN du slug différent de celui de la réponse pour ' + slug);
+    }
     var urn = profil ? urnProfil(profil.entityUrn) : null;
-    var alertes = [];
     if (!urn) alertes.push('URN introuvable pour ' + slug);
     if (urn && urnLaurent && urn.indexOf(urnLaurent) === 0) { alertes.push('URN parasite (Laurent) écarté pour ' + slug); urn = null; }
     var dist = /DISTANCE_(\d)/.exec(brut);
@@ -147,7 +165,7 @@
     var connecte = distance === 1 || /"\*?connection"\s*:\s*"urn:li:fsd_connection/.test(brut);
     var headline = profil ? compact(texteDe(profil.headline)) : '';
     return {
-      slug: slug, urn: urn,
+      slug: profil && profil.publicIdentifier ? profil.publicIdentifier : (parId ? null : slug), urn: urn,
       nom: profil ? compact([texteDe(profil.firstName), texteDe(profil.lastName)].join(' ')) : null,
       headline: headline || null, poste: headline || null, org: null,
       distance: connecte ? 1 : distance,
@@ -272,7 +290,7 @@
   var pur = {
     VERSION: VERSION, CFG: CFG, parseDateFr: parseDateFr, parseConnections: parseConnections, parseTopCard: parseTopCard,
     parseConversations: parseConversations, parseMessages: parseMessages, parseThreadDom: parseThreadDom, parseCartes: parseCartes,
-    parseRecherche: parseRecherche, parseGabarits: parseGabarits, urlMessages: urlMessages, estRetraite: estRetraite
+    parseRecherche: parseRecherche, slugDeWatch: slugDeWatch, parseGabarits: parseGabarits, urlMessages: urlMessages, estRetraite: estRetraite
   };
   if (!win) return pur; // Node : fonctions pures seulement
 
@@ -485,9 +503,10 @@
       var liste = (p && (p.reste || p.liste)) || [], out = [], alertes = [];
       while (liste.length && Date.now() < limite && etat.profils < CFG.maxProfils) {
         var w = liste.shift();
-        if (!w.slug) { out.push({ id: w.id, nom: w.nom, etat: 'inconnu', alertes: ['slug absent : recherche nécessaire'] }); continue; }
-        var t = await topCard(w.slug); etat.profils++;
-        out.push(Object.assign({ id: w.id, org: w.org || null, src: w.src || null, since: w.since || null }, t));
+        var sl = slugDeWatch(w);
+        if (!sl) { out.push({ id: w.id, nom: w.nom, etat: 'inconnu', alertes: ['slug absent : recherche nécessaire'] }); continue; }
+        var t = await topCard(sl); etat.profils++;
+        out.push(Object.assign({ id: w.id, org: w.org || w.c || null, src: w.src || null, since: w.since || null }, t, { nom: t.nom || w.nom || w.n || null }));
       }
       return { data: out, reste: liste, alertes: alertes };
     },

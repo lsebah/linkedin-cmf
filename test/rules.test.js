@@ -220,6 +220,24 @@ test('15. société présente 3 fois ou plus dans le lot : écartée (réseau)',
   assert.equal(p.ecartes.filter((e) => /^réseau/.test(e.motif)).length, 3);
 });
 
+test('15 bis. libellés génériques (« Indépendant », « CGP », « MUT ») : jamais comptés comme réseau', () => {
+  const cs = ['Anne Petit', 'Luc Roux', 'Marc Blanc', 'Jean Noir'].map((nom) => cgp({ nom, org: 'Indépendant' }));
+  const p = planDe({ suivi: cs, collect: { threads: cs.map((c) => fil(c.urn, [])) } });
+  assert.equal(p.plan.length, 4);
+  assert.equal(X.cleSociete('CGP'), '');
+  assert.equal(X.cleSociete('MUT'), '');
+  assert.equal(X.cleSociete('Alpha Patrimoine SAS'), 'alpha');
+});
+
+test('schémas : le plan produit respecte les champs obligatoires de plan.schema.json', () => {
+  const schema = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'schemas', 'plan.schema.json'), 'utf8'));
+  const c = cgp();
+  const p = planDe({ suivi: [c], collect: { threads: [fil(c.urn, [])] } });
+  for (const k of schema.required) assert.ok(k in p, k);
+  for (const k of schema.properties.plan.items.required) assert.ok(k in p.plan[0], k);
+  for (const f of ['suivi', 'collect']) JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'schemas', f + '.schema.json'), 'utf8'));
+});
+
 // ---------- Garde-fous complémentaires ----------
 
 test('textes figés : empreinte SHA-256 de chaque texte', () => {
@@ -312,4 +330,32 @@ test('exclusions : réseaux, hors cible, classement', () => {
   assert.deepEqual(X.classer({ headline: 'Conseiller en gestion de patrimoine indépendant' }), { famille: 'dist', categorie: 'cgp' });
   assert.deepEqual(X.classer({ headline: 'Directeur financier', org: 'Mutuelle du Sud' }), { famille: 'inst', categorie: 'mutuelle' });
   assert.equal(X.classer({ headline: 'Boulanger' }), null);
+});
+
+test('exécution : envoi confirmé mémorisé dans suivi, puis relance due au bon moment', () => {
+  const c = cgp({ connecteLe: '2026-11-01' });
+  let p = planDe({ suivi: [c], collect: { threads: [fil(c.urn, [])] } });
+  const doc = R.appliquerEnvoi(c, p.plan[0], '2026-11-16T08:31:00Z');
+  assert.equal(doc.envois.length, 1);
+  assert.equal(doc.fil[0].version, p.plan[0].version);
+  // Le même jour : déjà servi. Huit jours plus tard, sans relire le fil : relance 1.
+  assert.equal(planDe({ suivi: [doc] }).plan.length, 0);
+  p = planDe({ date: '2026-11-24', suivi: [doc] });
+  assert.equal(p.plan[0].type, 'relance1');
+  assert.equal(p.plan[0].filLu, false);
+  assert.deepEqual(p.filsALire, [c.urn]);
+  const ev = R.evenementFolk(p.plan[0], '2026-11-24T08:40:00Z');
+  assert.equal(ev.type, 'relance1');
+  assert.equal(ev.prenom, 'Paul');
+  assert.equal(R.evenementFolk({ type: 'anniversaire' }, 'x'), null);
+});
+
+test('exécution : fil mémorisé sans texte, réponse reçue prise en compte au run suivant', () => {
+  const c = cgp();
+  const doc = R.memoriserFil(c, fil(c.urn, [moi('2026-11-02', 'A1'), recu('2026-11-12T10:00:00Z', 'Oui, volontiers.')]), '2026-11-16T07:30:00Z');
+  assert.deepEqual(doc.fil[0], { de: 'moi', date: '2026-11-02', etape: 'A', version: 'A1' });
+  assert.equal(doc.fil[1].texte, undefined);
+  const p = planDe({ suivi: [doc] });
+  assert.equal(p.plan.length, 0);
+  assert.ok(p.aTraiter.some((e) => e.urn === c.urn));
 });

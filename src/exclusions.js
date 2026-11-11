@@ -90,10 +90,14 @@
   }
 
   // Clé de société pour compter les doublons dans le lot (formes juridiques et ponctuation retirées).
+  // Libellés génériques qui ne désignent pas une société (jamais comptés comme réseau).
+  var GENERIQUES = /^(independante?s?|cgpi?|cgp independante?|cif|mut|mutuelle|fo|family office|mfo|assoc|association|fondation|banque privee|corporate|institutionnel|freelance|auto[- ]entrepreneur|profession liberale|a son compte|self[- ]employed|n\/?a|-)?$/;
   function cleSociete(org) {
-    return norm(org).replace(/[.,()]/g, ' ')
-      .replace(/(^| )(sas|sarl|sa|sasu|eurl|scp|selarl|groupe|group|cabinet|conseil|conseils|finance|gestion privee|patrimoine)(?= |$)/g, ' ')
-      .replace(/\s+/g, ' ').trim() || norm(org);
+    var n = norm(org).replace(/[.,()]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (GENERIQUES.test(n)) return '';
+    var k = n.replace(/(^| )(sas|sarl|sa|sasu|eurl|scp|selarl|groupe|group|cabinet|conseil|conseils|finance|gestion privee|patrimoine)(?= |$)/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+    return k || n;
   }
 
   /*

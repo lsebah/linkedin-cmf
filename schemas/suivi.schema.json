@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/lsebah/linkedin-cmf/main/schemas/suivi.schema.json",
+  "title": "suivi",
+  "description": "État d'un contact (collection db « suivi », identifiant du document = URN LinkedIn ACoA...). Aucune coordonnée personnelle (email, téléphone).",
+  "type": "object",
+  "required": ["urn"],
+  "additionalProperties": true,
+  "properties": {
+    "urn": { "type": "string", "pattern": "^ACoA[\\w-]{10,}$", "description": "URN du profil, extrait d'une réponse LinkedIn, jamais recopié à la main." },
+    "slug": { "type": ["string", "null"], "description": "Identifiant public /in/<slug>." },
+    "nom": { "type": ["string", "null"], "description": "Nom complet affiché sur LinkedIn." },
+    "prenom": { "type": ["string", "null"] },
+    "nomFamille": { "type": ["string", "null"] },
+    "civilite": { "enum": ["Madame", "Monsieur", null], "description": "Fixée par Laurent quand le prénom ne permet pas de la déduire." },
+    "famille": { "enum": ["dist", "inst", null], "description": "dist = distributeurs (CGP, CIF, family offices, banques privées) ; inst = institutionnels." },
+    "categorie": { "enum": ["cgp", "family_office", "banque_privee", "mutuelle", "prevoyance", "association", "fondation", "corporate", null] },
+    "org": { "type": ["string", "null"] },
+    "poste": { "type": ["string", "null"] },
+    "headline": { "type": ["string", "null"] },
+    "source": { "enum": ["watch", "connexion", "backlog", "sourcing", "sendlog", null], "description": "Origine : invitation acceptée, nouvelle connexion, backlog Folk, sourcing, journal v8." },
+    "folkId": { "type": ["string", "null"], "pattern": "^per_" },
+    "statut": { "enum": ["a_inviter", "invite", "connecte", "refus", "dormant", "couvert", "ecarte", null] },
+    "distance": { "enum": [1, 2, 3, null] },
+    "inviteLe": { "type": ["string", "null"] },
+    "connecteLe": { "type": ["string", "null"], "description": "Date ou date-heure ISO de la connexion (règle des 15 jours)." },
+    "fil": {
+      "type": "array",
+      "description": "Dernier fil lu, sans le texte des messages.",
+      "items": {
+        "type": "object",
+        "required": ["de", "date"],
+        "properties": {
+          "de": { "enum": ["moi", "contact"] },
+          "date": { "type": "string" },
+          "etape": { "enum": ["A", "B", "E", "C", "?"], "description": "A prise de contact, B relance 1, E relance 2, C anniversaire, ? message libre ou ancien texte." },
+          "version": { "type": "string", "pattern": "^(A|AI|B|BI|E)[1-3]$|^C$" }
+        }
+      }
+    },
+    "filLu": { "type": ["string", "null"], "description": "Date-heure ISO de la dernière lecture du fil." },
+    "envois": {
+      "type": "array",
+      "description": "Envois confirmés par la routine.",
+      "items": {
+        "type": "object",
+        "required": ["date", "type"],
+        "properties": {
+          "date": { "type": "string", "description": "Heure réelle d'envoi, ISO UTC." },
+          "type": { "enum": ["INV", "A", "B", "E", "C"] },
+          "version": { "type": ["string", "null"] },
+          "compteur": { "enum": ["inv", "msg", "bkl", "rel", "bday"] }
+        }
+      }
+    },
+    "dernierRecu": { "type": ["object", "null"], "properties": { "date": { "type": "string" }, "extrait": { "type": "string", "maxLength": 200 } } },
+    "dernierAnniv": { "type": ["string", "null"], "description": "Dernier « Happy Birthday » envoyé (AAAA-MM-JJ)." },
+    "refus": { "type": ["object", "null"], "properties": { "date": { "type": ["string", "null"] }, "motif": { "type": "string" } } },
+    "statutFolk": { "type": ["string", "null"] },
+    "dernierContactFolk": { "type": ["string", "null"], "description": "lastInteractedAt de Folk au moment de la migration." },
+    "maj": { "type": "string" }
+  }
+}

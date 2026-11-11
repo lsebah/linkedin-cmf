@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/lsebah/linkedin-cmf/main/schemas/plan.schema.json",
+  "title": "plan",
+  "description": "Lot du jour produit par rules.construirePlan. Rien n'est envoyé tant que Laurent n'a pas donné son « go ».",
+  "type": "object",
+  "required": ["version", "date", "weekend", "budgets", "compteurs", "plan", "ecartes", "aTraiter", "reportes", "clotures", "erreurs", "filsALire", "rotation"],
+  "properties": {
+    "version": { "type": "string" },
+    "date": { "type": "string" },
+    "weekend": { "type": "boolean" },
+    "budgets": { "type": "object", "description": "Par compteur : jour, semaine (7 jours glissants), plafonds, reste après le lot." },
+    "compteurs": { "type": "object", "properties": {
+      "inv": { "type": "integer" }, "msg": { "type": "integer" }, "bkl": { "type": "integer" }, "rel": { "type": "integer" }, "bday": { "type": "integer" } } },
+    "plan": { "type": "array", "items": { "type": "object",
+      "required": ["ordre", "type", "compteur", "urn", "nom", "famille", "texte", "version", "motif"],
+      "properties": {
+        "ordre": { "type": "integer", "minimum": 1 },
+        "type": { "enum": ["anniversaire", "relance1", "relance2", "premier", "backlog", "invitation"] },
+        "compteur": { "enum": ["bday", "rel", "msg", "bkl", "inv"] },
+        "urn": { "type": "string" }, "slug": { "type": ["string", "null"] }, "nom": { "type": ["string", "null"] }, "org": { "type": ["string", "null"] },
+        "famille": { "enum": ["dist", "inst", null] }, "categorie": { "type": ["string", "null"] },
+        "version": { "type": ["string", "null"], "description": "A1..A3, AI1..AI3, B1..B3, BI1, BI2, E1, E2, C ; null pour une invitation." },
+        "texte": { "type": ["string", "null"], "description": "Texte figé rendu, à envoyer tel quel ; null pour une invitation (sans note)." },
+        "motif": { "type": "string" },
+        "filLu": { "type": "boolean", "description": "Le fil a été lu à la préparation. Le contrôle du fil reste obligatoire juste avant l'envoi." } } } },
+    "ecartes": { "type": "array", "items": { "type": "object", "required": ["motif"] } },
+    "aTraiter": { "type": "array", "description": "Réservé à Laurent : réponses reçues, civilité incertaine, fil au tutoiement, versions épuisées.", "items": { "type": "object", "required": ["motif"] } },
+    "reportes": { "type": "array", "description": "Plafond atteint, fil non lu, un envoi par jour, rotation.", "items": { "type": "object", "required": ["motif"] } },
+    "clotures": { "type": "array", "description": "Closed-lost dormant à appliquer dans Folk.", "items": { "type": "object", "required": ["urn", "statut"] } },
+    "erreurs": { "type": "array", "description": "URN partagé, invalide ou parasite : aucun envoi pour ces contacts.", "items": { "type": "object", "required": ["urn", "motif"] } },
+    "filsALire": { "type": "array", "items": { "type": "string" }, "description": "URN dont le fil est à lire (étape threads), puis relancer le moteur." },
+    "rotation": { "type": "object", "description": "Dernière version utilisée par série après ce lot ; à écrire dans sendlog (champ rot)." }
+  }
+}

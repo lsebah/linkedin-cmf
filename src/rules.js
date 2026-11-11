@@ -437,6 +437,13 @@
           return;
         }
 
+        // Contact déjà travaillé d'après Folk mais dont le fil n'a jamais été lu (migration) : lecture demandée, aucun envoi.
+        if (cycle.etat === 'vide' && !fil.lu && !c.filLu && c.dernierContactFolk && c.source !== 'backlog') {
+          filsALire.push(urn);
+          reportes.push(fusion(base(c), { motif: 'fil jamais lu (contact déjà travaillé dans Folk)', prevu: 'premier' }));
+          return;
+        }
+
         // Fil vide : premier contact ou invitation.
         if (cycle.etat === 'vide') {
           var connecte = c.connecte || c.statut === 'connecte' || c.distance === 1;
@@ -555,7 +562,50 @@
     };
   }
 
+  // ---------- Mise à jour de l'état (exécution) ----------
+
+  /* Mémorise dans suivi le fil lu aujourd'hui, sans le texte des messages (date, auteur, version reconnue). */
+  function memoriserFil(doc, thread, quand) {
+    var d = fusion({}, doc);
+    if (!thread || thread.lu === false || !Array.isArray(thread.messages)) return d;
+    d.fil = thread.messages.map(normMessage).filter(function (m) { return m.jour; }).map(function (m) {
+      var o = { de: m.de, date: m.date };
+      if (m.de === 'moi') { o.etape = m.etape; if (m.version) o.version = m.version; }
+      return o;
+    });
+    d.filLu = quand;
+    var recus = thread.messages.map(normMessage).filter(function (m) { return m.de === 'contact' && m.jour; });
+    if (recus.length) d.dernierRecu = { date: recus[recus.length - 1].date, extrait: String(recus[recus.length - 1].texte || '').slice(0, 200) };
+    return d;
+  }
+
+  /* Enregistre un envoi CONFIRMÉ dans le fil (après le clic et la vérification). Renvoie le nouveau document suivi. */
+  function appliquerEnvoi(doc, action, dateUTC) {
+    var d = fusion({ urn: action.urn, slug: action.slug, nom: action.nom, org: action.org, famille: action.famille, categorie: action.categorie }, doc || {});
+    var type = action.type === 'invitation' ? 'INV' : action.type === 'anniversaire' ? 'C' : T.ETAPE[T.serieDe(action.version)];
+    d.envois = (d.envois || []).concat([{ date: dateUTC, type: type, version: action.version || null, compteur: action.compteur }]);
+    if (type === 'INV') { d.statut = 'invite'; d.inviteLe = jourParis(dateUTC); }
+    else if (type === 'C') d.dernierAnniv = jourParis(dateUTC);
+    else {
+      d.statut = 'connecte';
+      d.fil = (d.fil || []).concat([{ de: 'moi', date: dateUTC, etape: type, version: action.version }]);
+    }
+    d.maj = dateUTC;
+    return d;
+  }
+
+  /* Événement Folk correspondant à un envoi confirmé (entrée de folk_sync.py). Les anniversaires n'en créent pas. */
+  function evenementFolk(action, dateUTC, profil) {
+    if (action.type === 'anniversaire') return null;
+    var n = T.decouperNom(action.nom);
+    profil = profil || {};
+    return { urn: action.urn, slug: action.slug, nom: action.nom, prenom: n.prenom, nomFamille: n.nomFamille, org: action.org || profil.org || null,
+      poste: profil.poste || null, famille: action.famille, categorie: action.categorie, type: action.type, version: action.version,
+      texte: action.texte || '', dateUTC: dateUTC };
+  }
+
   return {
+    memoriserFil: memoriserFil, appliquerEnvoi: appliquerEnvoi, evenementFolk: evenementFolk,
     VERSION: VERSION, DEFAUT: DEFAUT, construirePlan: construirePlan, analyserCycle: analyserCycle, filDe: filDe, budgets: budgets,
     jourParis: jourParis, diffJours: diffJours, plusJours: plusJours, plusMois: plusMois
   };

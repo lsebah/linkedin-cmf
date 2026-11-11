@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/lsebah/linkedin-cmf/main/schemas/collect.schema.json",
+  "title": "collect",
+  "description": "Collecte du jour, assemblée par la routine à partir des appels CMF.collect.run(etape). Lecture seule.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "date": { "type": "string" },
+    "lastRun": { "type": "string" },
+    "replies": { "type": "array", "items": { "type": "object", "required": ["urn"], "properties": {
+      "urn": { "type": "string" }, "nom": { "type": ["string", "null"] }, "slug": { "type": ["string", "null"] },
+      "date": { "type": ["string", "null"] }, "extrait": { "type": "string", "maxLength": 200 } } } },
+    "birthdays": { "type": "array", "items": { "type": "object", "required": ["slug"], "properties": {
+      "urn": { "type": ["string", "null"], "description": "À résoudre par l'étape profiles si absent de la carte." },
+      "slug": { "type": "string" }, "nom": { "type": ["string", "null"] }, "date": { "type": ["string", "null"] } } } },
+    "jobChanges": { "type": "array", "items": { "type": "object", "properties": {
+      "slug": { "type": "string" }, "nom": { "type": ["string", "null"] }, "texte": { "type": "string" } } } },
+    "connections": { "type": "array", "items": { "type": "object", "required": ["urn"], "properties": {
+      "urn": { "type": "string" }, "slug": { "type": ["string", "null"] }, "nom": { "type": ["string", "null"] },
+      "headline": { "type": ["string", "null"] }, "connecteLe": { "type": "string" } } } },
+    "watch": { "type": "array", "items": { "type": "object", "properties": {
+      "id": { "type": "string", "description": "Identifiant du document watch." },
+      "urn": { "type": ["string", "null"] }, "slug": { "type": ["string", "null"] }, "nom": { "type": ["string", "null"] },
+      "etat": { "enum": ["connecte", "attente", "retire", "inconnu"] },
+      "invitation": { "enum": ["SENT", "RECEIVED", "PENDING", null] }, "distance": { "enum": [1, 2, 3, null] } } } },
+    "threads": { "type": "array", "items": { "type": "object", "required": ["urn", "lu"], "properties": {
+      "urn": { "type": "string" },
+      "lu": { "type": "boolean", "description": "false : fil non lu, aucun premier message possible." },
+      "source": { "enum": ["api", "dom"] }, "vide": { "type": "boolean" },
+      "carteVue": { "type": "boolean", "description": "Anti-faux négatif : carte du contact visible dans la zone de rédaction." },
+      "tronque": { "type": "boolean" }, "motif": { "type": ["string", "null"] },
+      "messages": { "type": "array", "items": { "type": "object", "required": ["de"], "properties": {
+        "de": { "enum": ["moi", "contact"] }, "date": { "type": ["string", "null"] }, "texte": { "type": "string" } } } } } } },
+    "profiles": { "type": "array", "items": { "type": "object", "properties": {
+      "slug": { "type": ["string", "null"] }, "urn": { "type": ["string", "null"] }, "nom": { "type": ["string", "null"] },
+      "headline": { "type": ["string", "null"] }, "poste": { "type": ["string", "null"] }, "org": { "type": ["string", "null"] },
+      "distance": { "enum": [1, 2, 3, null] }, "connecte": { "type": "boolean" },
+      "invitation": { "enum": ["SENT", "RECEIVED", "PENDING", null] }, "invitable": { "type": "boolean" }, "retraite": { "type": "boolean" },
+      "source": { "enum": ["sourcing", "backlog", null], "description": "sourcing : candidat à une invitation." },
+      "famille": { "enum": ["dist", "inst", null] }, "alertes": { "type": "array", "items": { "type": "string" } } } } }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "linkedin-cmf",
+  "version": "9.0.0",
+  "private": true,
+  "description": "Moteur d'acquisition LinkedIn CMF v9 : collecte en lecture seule, moteur de règles, synchronisation Folk",
+  "license": "UNLICENSED",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\" && python -m unittest discover -s test",
+    "build": "node build.js",
+    "plan": "node src/plan.js"
+  }
+}
