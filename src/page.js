@@ -69,7 +69,7 @@
 
     h.push('<section><h2>Réponses à traiter par Laurent</h2>' + tableau(['Contact', 'Organisation', 'Date', 'Motif', 'Extrait'], (plan.aTraiter || []).map(function (a) {
       var fil = a.urn ? ' <a class="fil" href="' + lienFil(a.urn) + '" target="_blank" rel="noopener">fil</a>' : '';
-      return [nomLie(a) + fil, esc(a.org || ''), esc((a.date || '').slice(0, 10)), esc(a.motif), esc(masquer(a.extrait).slice(0, 160))];
+      return [nomLie(a) + fil, esc(a.org || ''), esc((a.date || '').slice(0, 10)), esc(a.motif), esc(masquer(a.extrait).slice(0, 160).replace(/[\uD800-\uDBFF]$/, '').replace(/^[\uDC00-\uDFFF]/, ''))];
     }), 'Aucune réponse en attente.') + '</section>');
 
     h.push('<section><h2>Lot du jour</h2><p class="note">Rien ne part avant le « go » de Laurent. Chaque envoi est fait un par un dans LinkedIn, après contrôle du fil.</p>' +

@@ -204,7 +204,7 @@
         conversation: o.entityUrn,
         date: o.lastActivityAt ? new Date(o.lastActivityAt).toISOString() : (dernier ? dernier.date : null),
         dernierDe: dernier ? dernier.de : null,
-        extrait: dernier ? dernier.texte.slice(0, 200) : '',
+        extrait: dernier ? dernier.texte.slice(0, 200).replace(/[\uD800-\uDBFF]$/, '') : '',
         nonLu: (o.unreadCount || 0) > 0
       });
       return false;
@@ -261,7 +261,7 @@
       var urn = c.urn && !(urnLaurent && c.urn.indexOf(urnLaurent) === 0) ? c.urn : null;
       var t = compact(c.texte).split(String.fromCharCode(8217)).join("'"); // apostrophe typographique ramenée à l'apostrophe droite
       var d = parseDateFr((DATE_CARTE.exec(t) || [])[1] || '', aujourdhui);
-      out.push({ slug: c.slug, nom: compact(c.nom) || null, urn: urn, date: d, texte: t.slice(0, 200) });
+      out.push({ slug: c.slug, nom: compact(c.nom) || null, urn: urn, date: d, texte: t.slice(0, 200).replace(/[\uD800-\uDBFF]$/, '') });
     });
     return out;
   }
@@ -598,7 +598,7 @@
     var b = new win.Blob([JSON.stringify(obj)], { type: 'application/json' });
     var lien = doc.createElement('a');
     lien.href = win.URL.createObjectURL(b);
-    lien.download = String(nom).replace(/[^w.-]/g, '_');
+    lien.download = String(nom).replace(/[^A-Za-z0-9_.-]/g, '_');
     doc.body.appendChild(lien);
     lien.click(); // clic sur notre propre lien de téléchargement, jamais sur un élément de LinkedIn
     lien.remove();

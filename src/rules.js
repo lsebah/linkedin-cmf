@@ -229,6 +229,8 @@
       Object.keys(src).forEach(function (k) {
         if (src[k] !== undefined && src[k] !== null && src[k] !== '' && (c[k] === undefined || c[k] === null || c[k] === '')) c[k] = src[k];
       });
+      // Une fiche qui ne porte que le nom de famille (« Durand ») est complétée par le nom complet lu ailleurs (« Paul Durand »).
+      if (src.nom && c.nom && src.nom !== c.nom && inclus(X.norm(c.nom), X.norm(src.nom))) c.nom = src.nom;
       if (origine) (c.origines = c.origines || []).push(origine);
       return c;
     }
@@ -270,7 +272,11 @@
       }
     });
     var anniversaires = liste(collect.birthdays);
-    anniversaires.forEach(function (a) { voir(a.urn, a.slug, a.nom, 'anniversaire'); });
+    anniversaires.forEach(function (a) {
+      voir(a.urn, a.slug, a.nom, 'anniversaire');
+      var c = contacts[a.urn];
+      if (c && a.nom && c.nom && inclus(X.norm(c.nom), X.norm(a.nom))) c.nom = a.nom;
+    });
 
     Object.keys(vus).forEach(function (urn) {
       if (bloques[urn]) return;
@@ -287,8 +293,16 @@
     });
     function memePersonne(noms) {
       // Tolère « Paul Durand » et « Paul D. » ou un nom suivi d'un titre : même premier mot et même initiale de nom.
-      var cles = noms.map(function (n) { var m = n.split(' '); return m[0] + '|' + (m[1] || '').charAt(0); });
+      // Tolère aussi une fiche réduite au nom de famille : « Durand » et « Paul Durand ».
+      var long = noms.slice().sort(function (a, b) { return b.length - a.length; })[0];
+      var cles = noms.filter(function (n) { return n === long || !inclus(n, long); })
+        .map(function (n) { var m = n.split(' '); return m[0] + '|' + (m[1] || '').charAt(0); });
       return cles.every(function (k) { return k === cles[0]; });
+    }
+    // Vrai si tous les mots de « court » figurent dans « long », qui en compte davantage.
+    function inclus(court, long) {
+      var a = String(court).split(' ').filter(Boolean), b = String(long).split(' ').filter(Boolean);
+      return a.length > 0 && a.length < b.length && a.every(function (m) { return b.indexOf(m) >= 0; });
     }
 
     var threads = {};
@@ -591,7 +605,7 @@
     });
     d.filLu = quand;
     var recus = thread.messages.map(normMessage).filter(function (m) { return m.de === 'contact' && m.jour; });
-    if (recus.length) d.dernierRecu = { date: recus[recus.length - 1].date, extrait: String(recus[recus.length - 1].texte || '').slice(0, 200) };
+    if (recus.length) d.dernierRecu = { date: recus[recus.length - 1].date, extrait: String(recus[recus.length - 1].texte || '').slice(0, 200).replace(/[\uD800-\uDBFF]$/, '') };
     return d;
   }
 

@@ -381,3 +381,13 @@ test('migration : contact déjà travaillé dans Folk, fil jamais lu : lecture d
   assert.equal(p.plan.length, 0);
   assert.deepEqual(p.filsALire, [a.urn]);
 });
+
+test('fiche réduite au nom de famille : pas de faux doublon, nom complété', () => {
+  const urn = 'ACoAAB1234567890abcdefghijklmnopqrstuvwxyz0';
+  const p = R.construirePlan({ date: '2026-11-11', sendlog: [],
+    suivi: [{ urn, slug: 'guido-chimienti', nom: 'Chimienti', statut: 'connecte', fil: [], envois: [] }],
+    collect: { birthdays: [{ urn, slug: 'guido-chimienti', nom: 'Guido Chimienti', date: '2026-11-11' }] } });
+  assert.equal(p.erreurs.length, 0);
+  const tous = JSON.stringify(p);
+  assert.ok(!/"nom":"Chimienti"/.test(tous) || /Guido Chimienti/.test(tous));
+});
