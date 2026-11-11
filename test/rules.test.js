@@ -373,3 +373,11 @@ test('exécution : fil mémorisé sans texte, réponse reçue prise en compte au
   assert.equal(p.plan.length, 0);
   assert.ok(p.aTraiter.some((e) => e.urn === c.urn));
 });
+
+test('migration : contact déjà travaillé dans Folk, fil jamais lu : lecture demandée pour un connecté, rien pour un simple invité', () => {
+  const a = cgp({ dernierContactFolk: '2026-11-05T09:00:00Z', statutFolk: 'Lead' });
+  const b = cgp({ dernierContactFolk: '2026-11-05T09:00:00Z', statut: 'invite', distance: 2 });
+  const p = planDe({ suivi: [a, b] });
+  assert.equal(p.plan.length, 0);
+  assert.deepEqual(p.filsALire, [a.urn]);
+});

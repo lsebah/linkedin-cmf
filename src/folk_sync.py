@@ -30,7 +30,7 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
-VERSION = "9.0.1"
+VERSION = "9.0.2"
 API = "https://api.folk.app/v1"
 
 LAURENT = "usr_97d36c92-4487-4b45-8a90-3982aec9e0ea"

@@ -1,6 +1,6 @@
 {
   "name": "linkedin-cmf",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "private": true,
   "description": "Moteur d'acquisition LinkedIn CMF v9 : collecte en lecture seule, moteur de règles, synchronisation Folk",
   "license": "UNLICENSED",

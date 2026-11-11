@@ -12,7 +12,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var VERSION = '9.0.1';
+  var VERSION = '9.0.2';
 
   var TEXTES = {
     A1: [

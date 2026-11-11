@@ -1,6 +1,6 @@
 # linkedin-cmf : moteur d'acquisition LinkedIn CMF
 
-Version 9.0.1 (2026-11-11). Auteur : Laurent Sebah (CMF).
+Version 9.0.2 (2026-11-11). Auteur : Laurent Sebah (CMF).
 
 Scripts de la tâche planifiée « Prospection LinkedIn CMF ». La tâche se fait en deux temps :
 
@@ -30,6 +30,7 @@ Aucun script de ce dépôt n'envoie de message, d'invitation ou d'acceptation. L
 | `src/etat.js` | Ligne de commande Node : met à jour `suivi` (fils lus, envois confirmés). |
 | `src/folk_sync.py` | Dédoublonnage, routage et interactions Folk en lot (mode plan, `--dry-run` par défaut). |
 | `migration/build_suivi.js` | Construit la collection `suivi` depuis `sendlog`, `watch` et Folk. |
+| `migration/appliquer_resolution.js` | Verse dans `suivi` les fiches dont l'URN vient d'être résolu. |
 | `schemas/*.schema.json` | Schémas de `suivi`, `collect` et `plan`. |
 | `dist/*.min.js` | Versions compactes à coller dans le navigateur (`npm run build`). |
 | `prompt/261111_prospection-linkedin-v9.md` | Prompt v9 de la tâche planifiée. |
@@ -41,7 +42,7 @@ Aucun script de ce dépôt n'envoie de message, d'invitation ou d'acceptation. L
 npm test
 ```
 
-48 tests Node (dont les 15 cas d'acceptation du brief) et 18 tests Python. Aucune dépendance à installer. Node 20 ou plus, Python 3.10 ou plus.
+49 tests Node (dont les 15 cas d'acceptation du brief) et 18 tests Python. Aucune dépendance à installer. Node 20 ou plus, Python 3.10 ou plus.
 
 ## Préparer un lot
 
@@ -83,26 +84,25 @@ Chaque appel renvoie `{ ok, etape, data, reste, alertes, duree, arret }`. `reste
 
 Garde-fous : 1,2 à 2,5 s entre requêtes, 60 profils et 20 recherches au plus par chargement, URN toujours extrait de la réponse, URN de Laurent (`ACoAAABb3LgB...`) signalé et écarté. Le jeton CSRF est lu dans la page à l'exécution et n'est ni renvoyé ni journalisé.
 
-### Validation sur LinkedIn réel (à faire une fois)
+### Validation sur LinkedIn réel (faite le 2026-11-11)
 
-Les fonctions d'analyse sont testées sur fixtures, mais les réponses réelles de LinkedIn n'ont pas été vues depuis ce dépôt. Avant la première préparation, lancer dans la routine, onglet https://www.linkedin.com/messaging/ ouvert sur un fil :
+`dist/collect.min.js` (v9.0.2) a été collé tel quel dans un onglet LinkedIn connecté au compte de Laurent, en lecture seule :
 
-```js
-JSON.stringify(await CMF.collect.run('diagnostic'))
-```
+| Étape | Résultat |
+|---|---|
+| `diagnostic` | identité lue, 10 connexions avec slug et headline, bandeau de profil en version `WebTopCardCore-20`, URN cohérent, 20 conversations avec leur dernier message |
+| `conversations` | 20 conversations, réponses reçues détectées |
+| `threads` par l'API | 2 s par fil, auteur et date de chaque message |
+| `threads` par cadre caché | 7 à 10 s par fil, sans navigation ; fil vide reconnu par le bouton « Supprimer <Prénom Nom> » et la carte de profil ; même résultat que l'API |
+| `profiles` | 58 profils résolus en 3 appels, par slug public ou par identifiant de membre (`ACwAA...`) ; connecté, invitation en attente (`SENT`), distance |
+| `birthdays` | 10 cartes lues par cadre caché ; les cartes ne portent pas l'URN (à résoudre par `profiles`) ; extraction du nom et de la date corrigée ensuite, non rejouée en réel |
 
-Le résultat ne contient ni nom ni message, seulement des indicateurs. Attendu :
+À savoir :
+- La page LinkedIn ne peut pas télécharger le script elle-même (sa politique de sécurité bloque raw.githubusercontent.com) : il faut le coller. Le fichier compact est en ASCII pur pour que le collage soit sûr.
+- L'URN du compte connecté est lu sur `/voyager/api/me` et écarté des résultats. Il ne commence pas par `ACoAAABb3LgB` : cet URN « parasite » relevé en v8 n'est donc pas celui du compte ; il reste écarté par précaution.
+- Non testés en réel : `jobChanges`, `recherche`, `watch` (même mécanique que `profiles`), et le navigateur intégré de la routine (les essais ont été faits dans Chrome).
 
-| Indicateur | Attendu | Sinon |
-|---|---|---|
-| `moi.urnAttendu` | `true` | `/voyager/api/me` a changé : fournir l'URN par `CMF.collect.etat.moi = { urn, nom }`. |
-| `connexions.lues` | 10, avec slug et headline | L'identifiant `connexionsDeco` a changé (`CMF.collect.CFG.connexionsDeco`). |
-| `topCard.urnCoherent` | `true`, `deco` renseigné | Aucune version de WebTopCardCore ne répond : mettre la bonne dans `CMF.collect.CFG.topCardDecos`. |
-| `filParCadre.lu` | `true`, `carteVue` vrai ou des messages datés | LinkedIn refuse l'affichage en cadre caché : les fils se lisent alors par navigation, comme en v8. |
-| `messagerie.gabaritConversations` | `true` | Ouvrir /messaging/ dans l'onglet avant de charger le script ; sinon lire la liste dans le DOM. |
-| `messagerie.avecDernierMessage` | supérieur à 0 | La structure GraphQL a changé : `conversations` renvoie alors une alerte, sans risque d'envoi. |
-
-Dans tous les cas dégradés, le moteur reste sûr : un fil non lu donne « fil non lu, reporté », jamais un envoi.
+Pour refaire le contrôle à tout moment : `JSON.stringify(await CMF.collect.run('diagnostic'))` (ni nom ni message dans le résultat). En cas de réponse inattendue, le moteur reste sûr : un fil non lu donne « fil non lu, reporté », jamais un envoi.
 
 ## Folk
 
@@ -134,7 +134,11 @@ Règles appliquées : recherche par nom complet avec et sans accents, rapprochem
 node migration/build_suivi.js --sendlog db/sendlog --watch db/watch --folk folk.json --date 2026-11-11 --sortie suivi.json --a-resoudre a_resoudre.json
 ```
 
-`--sendlog` et `--watch` : dossiers de documents exportés par ArtifactData (`out_dir`). `--folk` : personnes des groupes CGP France, Weekly et The List (réponses d'API). La clé de `suivi` est l'URN : y entrent les invitations acceptées de `watch` et les contacts dont l'URN figure dans les notes de `sendlog`. Les fiches Folk n'ont qu'un slug : elles sortent dans `a_resoudre.json`, que la routine résout par l'étape `profiles` (60 par run) avant de les verser dans `suivi`. Les fils ne sont pas connus à la migration : le premier run v9 les lit et fixe l'état réel.
+Faite le 2026-11-11 sur les données réelles (5 702 fiches Folk, 16 jours de `sendlog`, 157 documents `watch`) : 105 documents `suivi` écrits, 139 fiches en file `aresoudre`.
+
+`--sendlog` et `--watch` : dossiers de documents exportés par ArtifactData (`out_dir`). `--folk` : personnes des groupes CGP France, Weekly et The List (réponses d'API). La clé de `suivi` est l'URN : y entrent les invitations acceptées de `watch` et les contacts dont l'URN figure dans les notes de `sendlog`. Les fiches Folk n'ont qu'un slug : elles sortent dans `a_resoudre.json`, que la routine résout par l'étape `profiles` (60 par run) avant de les verser dans `suivi`. Une URL Folk de la forme `/in/ACoAA...` donne directement l'URN ; la connexion reste alors à vérifier. Les fils ne sont pas connus à la migration : le premier run v9 les lit et fixe l'état réel.
+
+Après une résolution par `profiles` : `node migration/appliquer_resolution.js --lot lot.json --resultats resultats.txt --suivi dossier_suivi --date AAAA-MM-JJ` (une ligne `URN|distance|c ou a` par fiche, dans l'ordre du lot).
 
 ## Règles (prompt v8, reprises à l'identique)
 

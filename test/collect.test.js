@@ -17,6 +17,9 @@ test('collect.js sous Node : fonctions pures seulement, aucun accès navigateur'
 });
 
 test('dates françaises des fils et des cartes', () => {
+  assert.equal(C.parseDateFr('25 AOÛT 2025', AUJ), '2025-08-25'); // format réel des séparateurs de fil
+  assert.equal(C.parseDateFr('19 JUIL.', AUJ), '2026-07-19');
+  assert.equal(C.parseDateFr('11 SEPT.', AUJ), '2026-09-11');
   assert.equal(C.parseDateFr("Aujourd'hui", AUJ), '2026-11-16');
   assert.equal(C.parseDateFr('Hier', AUJ), '2026-11-15');
   assert.equal(C.parseDateFr('vendredi', AUJ), '2026-11-13');
@@ -91,7 +94,7 @@ test('fil lu dans le DOM puis moteur de règles : le contact a écrit en dernier
 
 test('cartes catch-up : slug, date, URN parasite écarté', () => {
   const c = C.parseCartes([
-    { slug: 'alice-fictive-0001', nom: 'Alice Fictive', texte: "Fêtez l'anniversaire d'Alice Fictive aujourd'hui", urn: 'ACoAAA111111FictifUrnAlpha00000000000000' },
+    { slug: 'alice-fictive-0001', nom: 'Alice Fictive', texte: ['Alice Fictive', 'Fêtez l’anniversaire de Alice aujourd’hui', 'Alice, je vous souhaite un très joyeux anniversaire.'].join(String.fromCharCode(10)), urn: 'ACoAAA111111FictifUrnAlpha00000000000000' },
     { slug: 'bruno-exemple-0002', nom: 'Bruno Exemple', texte: "L'anniversaire de Bruno Exemple était le 14 nov.", urn: 'ACoAAABb3LgBFictifUrnDeLaurent0000000000' },
     { slug: 'alice-fictive-0001', nom: 'Alice Fictive', texte: 'doublon' }
   ], AUJ, 'ACoAAABb3LgB');
@@ -110,9 +113,13 @@ test('gabarits GraphQL relevés dans les requêtes de la page, substitution de l
   const g = C.parseGabarits([
     'https://www.linkedin.com/voyager/api/voyagerMessagingGraphQL/graphql?queryId=messengerConversations.aaaa1111&variables=(mailboxUrn:urn%3Ali%3Afsd_profile%3AME)',
     'https://www.linkedin.com/voyager/api/voyagerMessagingGraphQL/graphql?queryId=messengerMessages.bbbb2222&variables=(conversationUrn:urn%3Ali%3Amsg_conversation%3A%28urn%3Ali%3Afsd_profile%3AME%2C2-OLD%3D%3D%29)',
+    'https://www.linkedin.com/voyager/api/voyagerMessagingGraphQL/graphql?queryId=messengerMessages.bbbb2222&variables=(conversationUrn:urn%3Ali%3Amsg_conversation%3A%28urn%3Ali%3Afsd_profile%3AME%2C2-AUTRE%3D%3D%29,syncToken:abc)',
+    'https://www.linkedin.com/voyager/api/voyagerMessagingGraphQL/graphql?queryId=messengerConversations.aaaa1111&variables=(query:(predicateUnions:List((x:(category:INBOX)))),count:20,mailboxUrn:urn%3Ali%3Afsd_profile%3AME)',
     'https://www.linkedin.com/voyager/api/graphql?queryId=autre'
   ]);
   assert.match(g.conversations, /messengerConversations\.aaaa1111/);
+  assert.ok(!/query:|syncToken/.test(g.conversations));
+  assert.ok(!/syncToken/.test(g.messages));
   const u = C.urlMessages(g.messages, 'urn:li:msg_conversation:(urn:li:fsd_profile:ME,2-NEW==)');
   assert.ok(u.endsWith('variables=(conversationUrn:urn%3Ali%3Amsg_conversation%3A%28urn%3Ali%3Afsd_profile%3AME%2C2-NEW%3D%3D%29)'));
 });

@@ -11,7 +11,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (T, X) {
   'use strict';
 
-  var VERSION = '9.0.1';
+  var VERSION = '9.0.2';
 
   var DEFAUT = {
     plafonds: {
@@ -452,7 +452,8 @@
         }
 
         // Contact déjà travaillé d'après Folk mais dont le fil n'a jamais été lu (migration) : lecture demandée, aucun envoi.
-        if (cycle.etat === 'vide' && !fil.lu && !c.filLu && c.dernierContactFolk && c.source !== 'backlog') {
+        if (cycle.etat === 'vide' && !fil.lu && !c.filLu && c.dernierContactFolk && c.source !== 'backlog' &&
+            (c.connecte || c.statut === 'connecte' || c.distance === 1)) {
           filsALire.push(urn);
           reportes.push(fusion(base(c), { motif: 'fil jamais lu (contact déjà travaillé dans Folk)', prevu: 'premier' }));
           return;

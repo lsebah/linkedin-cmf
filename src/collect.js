@@ -24,7 +24,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (win) {
   'use strict';
 
-  var VERSION = '9.0.1';
+  var VERSION = '9.0.2';
 
   var CFG = {
     pauseMin: 1200, pauseMax: 2500,   // ms entre deux requêtes
@@ -42,7 +42,9 @@
   // ---------- Fonctions pures ----------
 
   function compact(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
-  function sansAccents(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  // Expressions construites depuis des chaînes : le fichier compact reste en ASCII pur, sûr à coller.
+  var DIACRITIQUES = new RegExp('[\u0300-\u036f]', 'g');
+  function sansAccents(s) { return String(s || '').normalize('NFD').replace(DIACRITIQUES, ''); }
   function urnProfil(s) { var m = /(ACoA[\w-]{10,})/.exec(String(s || '')); return m ? m[1] : null; }
   function texteDe(x) { return x == null ? '' : typeof x === 'string' ? x : (x.text != null ? String(x.text) : ''); }
   function parcourir(o, f, prof) {
@@ -249,6 +251,7 @@
     return out;
   }
 
+  var DATE_CARTE = new RegExp("(aujourd'hui|today|hier|yesterday|\\d{1,2}(?:er)? [a-zA-Z\u00e9\u00fb]{3,9}\\.?|[A-Z][a-z]{2,8} \\d{1,2})", 'i');
   /* Cartes d'une page catch-up (anniversaires, changements de poste) : { texte, slug, nom, urn } */
   function parseCartes(cartes, aujourdhui, urnLaurent) {
     var vus = {}, out = [];
@@ -256,8 +259,8 @@
       if (!c.slug || vus[c.slug]) return;
       vus[c.slug] = 1;
       var urn = c.urn && !(urnLaurent && c.urn.indexOf(urnLaurent) === 0) ? c.urn : null;
-      var t = compact(c.texte);
-      var d = parseDateFr((/(aujourd'hui|today|hier|yesterday|\d{1,2}(?:er)? [a-zéûA-Z]{3,9}\.?|[A-Z][a-z]{2,8} \d{1,2})/i.exec(t) || [])[1] || '', aujourdhui);
+      var t = compact(c.texte).split(String.fromCharCode(8217)).join("'"); // apostrophe typographique ramenée à l'apostrophe droite
+      var d = parseDateFr((DATE_CARTE.exec(t) || [])[1] || '', aujourdhui);
       out.push({ slug: c.slug, nom: compact(c.nom) || null, urn: urn, date: d, texte: t.slice(0, 200) });
     });
     return out;
@@ -276,9 +279,9 @@
     (urls || []).forEach(function (u) {
       var m = /voyagerMessagingGraphQL\/graphql\?queryId=(messenger(Conversations|Messages)\.[0-9a-f]+)/.exec(u);
       if (!m) return;
-      if (m[2] === 'Conversations' && !/lastUpdatedBefore|recipients|query:/.test(u)) g.conversations = u;
+      if (m[2] === 'Conversations' && !/lastUpdatedBefore|recipients|query:|syncToken/.test(decodeURIComponent(u))) g.conversations = u;
       if (m[2] === 'Conversations' && !g.conversations) g.conversations = u;
-      if (m[2] === 'Messages' && /conversationUrn/.test(u) && !/deliveredAt|countBefore|prevCursor/.test(u)) g.messages = u;
+      if (m[2] === 'Messages' && /conversationUrn/.test(u) && !/syncToken|deliveredAt|countBefore|prevCursor/.test(decodeURIComponent(u)) && !g.messages) g.messages = u;
     });
     return g;
   }
@@ -355,7 +358,9 @@
       try {
         var j = await getJson('/voyager/api/identity/dash/profiles?q=memberIdentity&memberIdentity=' + encodeURIComponent(slug) + '&decorationId=' + decos[i]);
         etat.deco = decos[i];
-        return parseTopCard(j, slug, CFG.urnLaurent);
+        var t = parseTopCard(j, slug, CFG.urnLaurent);
+        if (t.urn && etat.moi && t.urn === etat.moi.urn) { t.alertes.push('URN du compte connecté écarté pour ' + slug); t.urn = null; }
+        return t;
       } catch (e) {
         if (e.arret) throw e;
         dernier = e;
@@ -379,7 +384,18 @@
         var d = null;
         try { d = f.contentDocument; } catch (e) { throw new Error('cadre inaccessible'); }
         if (d && /\/(checkpoint|authwall|login)\b/.test(String(f.contentWindow.location.pathname))) throw new Arret('vérification ou connexion demandée par LinkedIn');
-        if (d && d.body && pret(d)) { await dormir(1500); return await Promise.resolve(f.contentDocument); }
+        if (d && d.body && pret(d)) {
+          // La carte du contact peut s'afficher avant les messages : attendre que le contenu ne bouge plus.
+          var avant = -1, stable = 0;
+          await dormir(2500);
+          while (stable < 2 && Date.now() - debut < CFG.attenteCadre + 8000) {
+            var n = f.contentDocument.querySelectorAll('.msg-s-event-listitem').length;
+            stable = n === avant ? stable + 1 : 0;
+            avant = n;
+            await dormir(1200);
+          }
+          return f.contentDocument;
+        }
       }
       return null;
     } finally { /* le document est lu par l'appelant avant le retrait */ etat.cadre = f; }
@@ -401,9 +417,9 @@
   }
   function carteVue(d) {
     // Anti-faux négatif : la carte du destinataire est visible dans la zone de rédaction.
-    return !!(d.querySelector('.msg-compose__pill, .msg-connections-typeahead__pill, [class*="recipient-pill"]') ||
-      d.querySelector('button[aria-label^="Supprimer "], button[aria-label^="Remove "]') ||
-      d.querySelector('.msg-compose__profile-link[href*="/in/"], .msg-thread a[href*="/in/"], .msg-title-bar a[href*="/in/"]'));
+    // Vérifié sur LinkedIn réel le 2026-11-11 : bouton « Supprimer <Prénom Nom> » et carte de profil du nouveau fil.
+    return !!(d.querySelector('button[aria-label^="Supprimer "], button[aria-label^="Remove "]') ||
+      d.querySelector('.msg-s-profile-card a[href*="/in/"], .msg-compose__profile-link[href*="/in/"]'));
   }
 
   async function filParCadre(urn, m) {
@@ -439,7 +455,7 @@
     async diagnostic(p) {
       var out = { version: VERSION, page: win.location.pathname, alertes: [] };
       var m = await moi();
-      out.moi = { urnTrouve: !!m.urn, urnAttendu: !!(m.urn && m.urn.indexOf(CFG.urnLaurent) === 0), nomTrouve: !!m.nom };
+      out.moi = { urnTrouve: !!m.urn, nomTrouve: !!m.nom, estUrnParasite: !!(m.urn && m.urn.indexOf(CFG.urnLaurent) === 0) };
       var g = gabarits();
       out.messagerie = { gabaritConversations: !!g.conversations, gabaritMessages: !!g.messages };
       try {
@@ -500,6 +516,7 @@
     async jobChanges() { return cartesCatchUp('/mynetwork/catch-up/job_changes/'); },
 
     async watch(p, limite) {
+      await moi();
       var liste = (p && (p.reste || p.liste)) || [], out = [], alertes = [];
       while (liste.length && Date.now() < limite && etat.profils < CFG.maxProfils) {
         var w = liste.shift();
@@ -512,6 +529,7 @@
     },
 
     async profiles(p, limite) {
+      await moi();
       var slugs = (p && (p.reste || p.slugs)) || [], out = [];
       while (slugs.length && Date.now() < limite && etat.profils < CFG.maxProfils) { out.push(await topCard(slugs.shift())); etat.profils++; }
       return { data: out, reste: slugs, alertes: etat.profils >= CFG.maxProfils && slugs.length ? ['plafond de ' + CFG.maxProfils + ' profils atteint'] : [] };
@@ -521,7 +539,7 @@
       var urns = (p && (p.reste || p.urns)) || [], out = [], m = await moi();
       while (urns.length && Date.now() < limite - CFG.attenteCadre) {
         var u = urns.shift();
-        if (!/^ACoA[\w-]{10,}$/.test(u) || u.indexOf(CFG.urnLaurent) === 0) { out.push({ urn: u, lu: false, motif: 'URN invalide ou parasite' }); continue; }
+        if (!/^ACoA[\w-]{10,}$/.test(u) || u.indexOf(CFG.urnLaurent) === 0 || u === m.urn) { out.push({ urn: u, lu: false, motif: 'URN invalide ou parasite' }); continue; }
         out.push((p.api !== false && await filParApi(u, m)) || await filParCadre(u, m));
       }
       return { data: out, reste: urns };
@@ -547,9 +565,12 @@
       var cartes = [];
       d.querySelectorAll('main a[href*="/in/"]').forEach(function (a) {
         var slug = (/\/in\/([^/?#]+)/.exec(a.getAttribute('href')) || [])[1];
-        var carte = a.closest('li, [data-view-name], article, section > div') || a.parentElement;
+        // Vérifié sur LinkedIn réel le 2026-11-11 : une carte = [role="listitem"] ; le lien du profil n'a pas de texte,
+        // le nom est la première ligne de la carte.
+        var carte = a.closest('[role="listitem"], li, article') || a.parentElement;
+        var lignesCarte = String(carte ? carte.innerText : '').split(String.fromCharCode(10)).map(function (x) { return x.trim(); }).filter(Boolean);
         var lien = carte && carte.querySelector('a[href*="recipient=ACoA"], a[href*="recipients=ACoA"]');
-        cartes.push({ slug: slug, nom: a.getAttribute('aria-label') || a.innerText, texte: carte ? carte.innerText : a.innerText,
+        cartes.push({ slug: slug, nom: compact(a.innerText) || lignesCarte[0] || a.getAttribute('aria-label') || '', texte: carte ? carte.innerText : a.innerText,
           urn: lien ? urnProfil(lien.getAttribute('href')) : null });
       });
       var out = parseCartes(cartes, aujourdhui(), CFG.urnLaurent);

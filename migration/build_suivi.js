@@ -115,20 +115,32 @@ function construire({ sendlog, watch, folk, aujourdhui }) {
       vuLe: n.vuLe, fil: [], envois: [], maj };
   }));
 
-  // Folk : rapprochement par slug, sinon par nom complet ou nom de famille unique ; le reste part en « à résoudre ».
+  // Folk : rapprochement par slug, sinon par nom complet unique ; le reste part en « à résoudre ».
   const parSlug = {}, parNom = {};
   Object.values(suivi).forEach((s) => {
     if (s.slug) parSlug[s.slug.toLowerCase()] = s;
     (parNom[X.norm(s.nom)] = parNom[X.norm(s.nom)] || []).push(s);
   });
   const aResoudre = [];
+  const nomsFolk = {};
+  folk.forEach((p) => { const k = X.norm(p.fullName || [p.firstName, p.lastName].join(' ')); nomsFolk[k] = (nomsFolk[k] || 0) + 1; });
   folk.forEach((p) => {
     rapport.folk++;
-    const slug = ((p.urls || []).map((u) => (/linkedin\.com\/in\/([^/?#\s]+)/i.exec(u) || [])[1]).filter(Boolean)[0] || '').toLowerCase() || null;
+    // Le slug garde sa casse : une URL /in/ACoAA... ou /in/ACwAA... porte un identifiant de membre sensible à la casse.
+    const slugs = (p.urls || []).map((u) => (/linkedin\.com\/in\/([^/?#\s]+)/i.exec(u) || [])[1]).filter(Boolean);
+    const slug = slugs.find((x) => !/^AC[ow]AA/.test(x)) || slugs[0] || null;
+    const urnUrl = slugs.find((x) => /^ACoA[\w-]{20,}$/.test(x)) || null; // l'URL donne directement l'URN
     const e = etatFolk(p, aujourdhui);
     const complet = X.norm(p.fullName || [p.firstName, p.lastName].join(' '));
-    const cible = (slug && parSlug[slug]) || ((parNom[complet] || []).length === 1 && parNom[complet][0]) ||
-      ((parNom[X.norm(p.lastName)] || []).length === 1 && folk.filter((q) => X.norm(q.lastName) === X.norm(p.lastName)).length === 1 && parNom[X.norm(p.lastName)][0]) || null;
+    // Nom complet (au moins deux mots) et unique des deux côtés ; jamais sur le seul nom de famille (trop d'homonymes).
+    if (urnUrl && !suivi[urnUrl] && !e.collegue) {
+      rapport.urnsDansUrl = (rapport.urnsDansUrl || 0) + 1;
+      const doc = suivi[urnUrl] = { urn: urnUrl, slug: slug && !/^AC[ow]AA/.test(slug) ? slug : null, nom: p.fullName, org: null, famille: null, categorie: null,
+        source: e.source, statut: null, fil: [], envois: [], maj }; // connexion à vérifier par l'étape profiles
+      (parNom[X.norm(doc.nom)] = parNom[X.norm(doc.nom)] || []).push(doc);
+    }
+    const cible = (urnUrl && suivi[urnUrl]) || (slug && parSlug[slug.toLowerCase()]) ||
+      (complet.includes(' ') && (parNom[complet] || []).length === 1 && nomsFolk[complet] === 1 && parNom[complet][0]) || null;
     if (cible) {
       rapport.rapproches++;
       Object.assign(cible, { folkId: p.id, nom: p.fullName || cible.nom, slug: cible.slug || slug, org: cible.org || null, poste: p.jobTitle || null,
@@ -139,6 +151,7 @@ function construire({ sendlog, watch, folk, aujourdhui }) {
     if (!slug) { rapport.folkSansLinkedin++; return; }
     rapport.aResoudre++;
     aResoudre.push({ slug, folkId: p.id, nom: p.fullName, poste: p.jobTitle || null, famille: e.famille, categorie: e.categorie, source: e.source,
+      priorite: e.statutFolk && !e.statut && !e.collegue ? 1 : 0,
       statut: e.statut, motif: e.motif, statutFolk: e.statutFolk, dernierContactFolk: e.dernier, interactions: e.interactions, collegue: e.collegue });
   });
 

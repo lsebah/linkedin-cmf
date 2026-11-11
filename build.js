@@ -13,7 +13,7 @@ const cibles = {
 };
 for (const [sortie, fichiers] of Object.entries(cibles)) {
   const entree = fichiers.map(src).join('\n;\n');
-  const min = execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['--yes', 'esbuild@0.24.0', '--minify', '--charset=utf8', '--loader=js'],
+  const min = execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['--yes', 'esbuild@0.24.0', '--minify', '--charset=ascii', '--loader=js'],
     { input: entree, encoding: 'utf8', shell: process.platform === 'win32', maxBuffer: 1 << 26 });
   fs.writeFileSync(path.join(__dirname, 'dist', sortie), '/* linkedin-cmf v9 : ' + fichiers.join(' + ') + ' */\n' + min);
   console.log(sortie, Buffer.byteLength(min), 'octets');

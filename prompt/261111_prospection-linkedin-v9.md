@@ -2,7 +2,7 @@
 
 Run quotidien pour Laurent Sebah (CMF, produits structurés). Français, direct et dense. Pas de tiret cadratin. Pourcentages collés (12%). Dates AAAA-MM-JJ. « je », jamais « nous ».
 
-Changement par rapport à la v8 : la tâche se fait en deux temps. À 08:30 elle PRÉPARE le lot du jour sans rien envoyer. Elle n'envoie qu'après le « go » de Laurent dans la session. Les règles (plafonds, relances, rotation, exclusions, textes) ne sont plus appliquées à la main : elles sont dans le dépôt `lsebah/linkedin-cmf`, version `v9.0.1`, et le lot sort du moteur `rules.js`.
+Changement par rapport à la v8 : la tâche se fait en deux temps. À 08:30 elle PRÉPARE le lot du jour sans rien envoyer. Elle n'envoie qu'après le « go » de Laurent dans la session. Les règles (plafonds, relances, rotation, exclusions, textes) ne sont plus appliquées à la main : elles sont dans le dépôt `lsebah/linkedin-cmf`, version `v9.0.2`, et le lot sort du moteur `rules.js`.
 
 ```
 08:30 PRÉPARATION (automatique, aucun envoi)
@@ -27,7 +27,7 @@ EXÉCUTION
 
 ## Code et données
 
-Dépôt public : https://github.com/lsebah/linkedin-cmf (étiquette `v9.0.1`). Base brute : `https://raw.githubusercontent.com/lsebah/linkedin-cmf/v9.0.1/`.
+Dépôt public : https://github.com/lsebah/linkedin-cmf (étiquette `v9.0.2`). Base brute : `https://raw.githubusercontent.com/lsebah/linkedin-cmf/v9.0.2/`.
 
 | Fichier | Rôle | Où il tourne |
 |---|---|---|
@@ -37,14 +37,15 @@ Dépôt public : https://github.com/lsebah/linkedin-cmf (étiquette `v9.0.1`). B
 | `src/folk_sync.py` | opérations Folk en lot | bac à sable (Python), mode plan |
 | `dist/moteur.min.js` | secours si le bac à sable n'a pas Node : même moteur dans une page (`CMF.rules`, `CMF.page`) | onglet du navigateur |
 
-Installation dans le bac à sable, une fois par run : `git clone --depth 1 --branch v9.0.1 https://github.com/lsebah/linkedin-cmf` (ou téléchargement des fichiers bruts). Si le clone échoue : lire les fichiers par le navigateur (raw.githubusercontent.com) et les recopier dans le bac à sable.
+Installation dans le bac à sable, une fois par run : `git clone --depth 1 --branch v9.0.2 https://github.com/lsebah/linkedin-cmf` (ou téléchargement des fichiers bruts). Si le clone échoue : lire les fichiers par le navigateur (raw.githubusercontent.com) et les recopier dans le bac à sable.
 
-Chargement de `collect.js` dans l'onglet LinkedIn, une fois par run (à refaire si l'onglet est rechargé, test : `typeof CMF`) : lire `dist/collect.min.js` (WebFetch ou onglet raw + get_page_text) et le passer tel quel à javascript_tool. Ne jamais le modifier.
+Chargement de `collect.js` dans l'onglet LinkedIn, une fois par run (à refaire si l'onglet est rechargé, test : `typeof CMF`) : lire `dist/collect.min.js` (WebFetch ou onglet raw + get_page_text) et le passer tel quel à javascript_tool (fichier en ASCII pur, 19 Ko). La page LinkedIn ne peut pas le télécharger elle-même (sa politique de sécurité bloque raw.githubusercontent.com, vérifié le 2026-11-11). Ne jamais le modifier. Si la sortie d'un appel est tronquée par l'outil, garder le résultat dans la page (`window.__r = await CMF.collect.run(...)`) et le lire par tranches.
 
 Base db de la page https://claude.ai/artifact/3KGELf6U7fAaYjDSyX69a4 (ArtifactData) :
 - `sendlog` : un document par jour (AAAA-MM-JJ) : {inv, msg, bkl, rel, bday, lim, lastRun, rot, notes}. `rot` = dernière version envoyée par série (champ `rotation` du lot).
 - `watch` : invitations en attente (inchangé).
 - `suivi` : un document par contact, identifiant = URN (`schemas/suivi.schema.json`). C'est l'état de référence : fil mémorisé, envois, refus, civilité.
+- `aresoudre` : document unique `file` = {items: {<folkId>: {slug, urn?, nom, famille, categorie, source, statutFolk, dernierContactFolk}}}. Fiches Folk à vérifier par l'étape `profiles` avant création de leur document `suivi` (URN à résoudre depuis le slug, ou URN connu dont la connexion reste à vérifier).
 - `lot` : un document par jour (AAAA-MM-JJ) : {plan (JSON du lot), etat, fait: [URN envoyés], evenements: [événements Folk]}.
 
 Configuration du moteur (fichier `config.json` passé à `plan.js`) : `{"rampeDebut": "2026-11-12"}` (rampe du backlog : 20 par jour la 1re semaine, 35 la 2e, 50 ensuite ; ne pas changer cette date).
@@ -54,8 +55,9 @@ Configuration du moteur (fichier `config.json` passé à `plan.js`) : `{"rampeDe
 0. Outils : une ToolSearch `mcp__remote-devices__Claude_Browser__`, Composio, ArtifactData, Artifact. Ouvrir https://www.linkedin.com/messaging/ et attendre 10 s. PC ou LinkedIn injoignable : PushNotification « run LinkedIn non exécuté » et fin. Lire `sendlog` (7 derniers jours), toute la collection `suivi`, la collection `watch`, et le document `lot` du jour s'il existe (reprise).
 1. Charger `collect.min.js` dans l'onglet. Chaque appel dure moins de 45 s ; si `reste` n'est pas vide, rappeler la même étape avec `{reste: ...}`. Si `arret` est vrai : tout arrêter, notifier.
    - `CMF.collect.run('conversations', {depuis: <lastRun>})` : réponses reçues depuis le dernier run. Si l'alerte « gabarit GraphQL introuvable » revient : lire la liste des conversations dans le DOM comme en v8 (innerText des `.msg-conversation-listitem`).
-   - `CMF.collect.run('birthdays')` : anniversaires du jour et des 7 derniers jours. URN absents : les résoudre par `CMF.collect.run('profiles', {slugs})`. Secours : naviguer vers https://www.linkedin.com/mynetwork/catch-up/birthdays/, recharger `collect.min.js`, relancer l'étape.
+   - `CMF.collect.run('birthdays')` : anniversaires du jour et des 7 derniers jours. Les cartes ne portent pas l'URN : le résoudre pour chaque slug par `CMF.collect.run('profiles', {slugs})` (l'URN de `suivi` sert s'il y figure déjà avec le même slug). Secours : naviguer vers https://www.linkedin.com/mynetwork/catch-up/birthdays/, recharger `collect.min.js`, relancer l'étape.
    - Lundi à vendredi : `connections` ({depuis: <lastRun>}), `watch` ({liste: les 60 documents `watch` en attente les plus anciens, avec leur id}), `jobChanges` (pour information).
+   - Lundi à vendredi, file `aresoudre` : vérifier par `profiles` jusqu'à 30 entrées par jour, celles qui ont un `statutFolk` d'abord (slug = champ `slug`, ou l'URN quand il est connu). Pour chacune : créer le document `suivi` (urn, slug, nom, folkId, famille, categorie, source, statutFolk, dernierContactFolk, statut "connecte" si `etat` = connecte, "invite" si attente, sinon aucun, distance), puis retirer l'entrée de la file. Le moteur demandera ensuite la lecture du fil des connectés avant tout envoi.
    - Lundi à vendredi, sourcing (règles v8 inchangées : cgp-monitor, mutuelles-monitor, 20 recherches au plus par `CMF.collect.run('recherche', {requetes})`, dédoublonnage contre Folk, `watch`, `suivi`) : chaque candidat retenu est vérifié par `profiles` et versé dans `collect.profiles` avec `source: "sourcing"` et `famille` ("dist" ou "inst"). Backlog Folk : jusqu'à 30 fiches par jour sans document `suivi` (0 interaction ou dernière interaction de plus de 12 mois, URL LinkedIn présente) vérifiées par `profiles` et versées avec `source: "backlog"`, `famille`, `folkId`. Plafond commun : 60 profils par run.
 2. Assembler `collect.json` (`schemas/collect.schema.json`) : replies, birthdays, jobChanges, connections, watch, profiles, threads (vide à ce stade).
 3. Premier passage : `node src/plan.js --date <jour> --suivi suivi.json --collect collect.json --sendlog sendlog.json --config config.json --sortie plan.json`. Lire `filsALire`.
