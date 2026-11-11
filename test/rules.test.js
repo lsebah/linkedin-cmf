@@ -109,6 +109,20 @@ test('7. le contact a écrit en dernier il y a 5 jours : à traiter, aucun envoi
   assert.ok(p.aTraiter.some((e) => e.urn === c.urn));
 });
 
+test('7 bis. échange : Laurent a écrit en dernier, message ancien sans réponse : relance ; récent : attente', () => {
+  const a = cgp(), b = cgp(), q = cgp({ statutFolk: 'Qualified' }), m = cgp();
+  const echange = (dernier) => [moi('2026-09-01', 'A1'), recu('2026-09-03', 'Bonjour, envoyez-moi le Weekly.'), libre(dernier, 'Bonjour Paul, voici le Weekly.')];
+  const p = planDe({ suivi: [a, b, q, Object.assign({}, m, { fil: [{ de: 'moi', date: '2026-09-01', version: 'A1' }, { de: 'contact', date: '2026-09-03' }, { de: 'moi', date: '2026-09-20', etape: '?' }] })],
+    collect: { threads: [fil(a.urn, echange('2026-10-20')), fil(b.urn, echange('2026-11-12')), fil(q.urn, echange('2026-10-20'))] } });
+  assert.equal(actionsDe(p, a.urn)[0].type, 'relance1');
+  assert.match(actionsDe(p, a.urn)[0].motif, /échange resté sans réponse depuis le 2026-10-20/);
+  assert.equal(actionsDe(p, b.urn).length, 0); // 4 jours : trop récent
+  assert.equal(actionsDe(p, q.urn).length, 0); // Qualified dans Folk : jamais de relance automatique
+  assert.ok(p.ecartes.some((e) => e.urn === q.urn));
+  assert.equal(actionsDe(p, m.urn).length, 0); // fil seulement mémorisé : à relire d'abord
+  assert.deepEqual(p.filsALire, [m.urn]);
+});
+
 test('8. anniversaire et relance due le même jour : anniversaire seul, relance reportée', () => {
   const c = cgp();
   const p = planDe({

@@ -24,7 +24,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (win) {
   'use strict';
 
-  var VERSION = '9.0.0';
+  var VERSION = '9.0.1';
 
   var CFG = {
     pauseMin: 1200, pauseMax: 2500,   // ms entre deux requêtes

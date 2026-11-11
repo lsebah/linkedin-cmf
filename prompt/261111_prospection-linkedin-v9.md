@@ -2,7 +2,7 @@
 
 Run quotidien pour Laurent Sebah (CMF, produits structurés). Français, direct et dense. Pas de tiret cadratin. Pourcentages collés (12%). Dates AAAA-MM-JJ. « je », jamais « nous ».
 
-Changement par rapport à la v8 : la tâche se fait en deux temps. À 08:30 elle PRÉPARE le lot du jour sans rien envoyer. Elle n'envoie qu'après le « go » de Laurent dans la session. Les règles (plafonds, relances, rotation, exclusions, textes) ne sont plus appliquées à la main : elles sont dans le dépôt `lsebah/linkedin-cmf`, version `v9.0.0`, et le lot sort du moteur `rules.js`.
+Changement par rapport à la v8 : la tâche se fait en deux temps. À 08:30 elle PRÉPARE le lot du jour sans rien envoyer. Elle n'envoie qu'après le « go » de Laurent dans la session. Les règles (plafonds, relances, rotation, exclusions, textes) ne sont plus appliquées à la main : elles sont dans le dépôt `lsebah/linkedin-cmf`, version `v9.0.1`, et le lot sort du moteur `rules.js`.
 
 ```
 08:30 PRÉPARATION (automatique, aucun envoi)
@@ -27,7 +27,7 @@ EXÉCUTION
 
 ## Code et données
 
-Dépôt public : https://github.com/lsebah/linkedin-cmf (étiquette `v9.0.0`). Base brute : `https://raw.githubusercontent.com/lsebah/linkedin-cmf/v9.0.0/`.
+Dépôt public : https://github.com/lsebah/linkedin-cmf (étiquette `v9.0.1`). Base brute : `https://raw.githubusercontent.com/lsebah/linkedin-cmf/v9.0.1/`.
 
 | Fichier | Rôle | Où il tourne |
 |---|---|---|
@@ -37,7 +37,7 @@ Dépôt public : https://github.com/lsebah/linkedin-cmf (étiquette `v9.0.0`). B
 | `src/folk_sync.py` | opérations Folk en lot | bac à sable (Python), mode plan |
 | `dist/moteur.min.js` | secours si le bac à sable n'a pas Node : même moteur dans une page (`CMF.rules`, `CMF.page`) | onglet du navigateur |
 
-Installation dans le bac à sable, une fois par run : `git clone --depth 1 --branch v9.0.0 https://github.com/lsebah/linkedin-cmf` (ou téléchargement des fichiers bruts). Si le clone échoue : lire les fichiers par le navigateur (raw.githubusercontent.com) et les recopier dans le bac à sable.
+Installation dans le bac à sable, une fois par run : `git clone --depth 1 --branch v9.0.1 https://github.com/lsebah/linkedin-cmf` (ou téléchargement des fichiers bruts). Si le clone échoue : lire les fichiers par le navigateur (raw.githubusercontent.com) et les recopier dans le bac à sable.
 
 Chargement de `collect.js` dans l'onglet LinkedIn, une fois par run (à refaire si l'onglet est rechargé, test : `typeof CMF`) : lire `dist/collect.min.js` (WebFetch ou onglet raw + get_page_text) et le passer tel quel à javascript_tool. Ne jamais le modifier.
 
@@ -111,7 +111,7 @@ C. Après le dernier envoi
 - Calendrier : samedi et dimanche, anniversaires seulement.
 - Plafonds : invitations 12 par jour (8 distributeurs, 4 institutionnels) et 60 sur 7 jours ; premiers messages a et b 8 par jour et 40 sur 7 jours ; backlog selon la rampe et 200 sur 7 jours ; relances et anniversaires sans plafond. `lim: true` dans la semaine : aucune invitation.
 - Ordre : anniversaires, relances, premiers messages (invitations acceptées puis nouvelles connexions), backlog, invitations.
-- Relances : A seul de plus de 7 jours ► B ; A + B, B de plus de 14 jours ► E ; A + B + E ► Closed-lost dormant ; contact en dernier ► à traiter ; dernier message de plus de 12 mois sans refus ► B puis E ; refus ► jamais ; échange où Laurent a écrit en dernier ► écarté, sans relance automatique.
+- Relances : A seul de plus de 7 jours ► B ; A + B, B de plus de 14 jours ► E ; A + B + E ► Closed-lost dormant ; contact en dernier ► à traiter ; dernier message de plus de 12 mois sans refus ► B puis E ; refus ► jamais ; échange où Laurent a écrit en dernier, message ancien et sans réponse ► relance aux mêmes délais après relecture du fil (sauf fiche Qualified ou Closed-won).
 - Une personne : un envoi par jour, l'anniversaire prime.
 - Rotation des versions, famille et salutation (« Bonjour Madame X, » ; prénom seul si nom abrégé ; civilité incertaine ► à traiter : Laurent fixe `civilite` dans `suivi`), « Merci pour la connexion. » si connexion de moins de 15 jours (distributeurs).
 - Exclusions : réseaux, retraités, hors cible, société présente 3 fois ou plus dans le lot, URN partagé ou parasite (erreur, aucun envoi).

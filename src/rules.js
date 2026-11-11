@@ -11,7 +11,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (T, X) {
   'use strict';
 
-  var VERSION = '9.0.0';
+  var VERSION = '9.0.1';
 
   var DEFAUT = {
     plafonds: {
@@ -165,7 +165,7 @@
 
   /*
    * État du cycle de prospection d'un fil (anniversaires ignorés).
-   * Renvoie { etat } parmi : vide, reponse, echange, attente, B, E, dormant, reset.
+   * Renvoie { etat } parmi : vide, reponse, attente, B, E, dormant, reset ; apresEchange = le contact avait déjà répondu.
    */
   function analyserCycle(messages, date, cfg) {
     var msgs = messages.filter(function (m) { return !(m.de === 'moi' && m.etape === 'C'); });
@@ -186,13 +186,18 @@
       if (i > 0 && plusMois(msgs[i - 1].jour, cfg.moisReset) < m.jour) { cycleRemis = true; break; }
       i--;
     }
-    if (echange) return { etat: 'echange', dernier: dernier.jour };
+    // Après une réponse du contact, un message de Laurent ancien et resté sans réponse se relance comme les autres
+    // (consigne de Laurent, 2026-11-11) : mêmes délais, signalé par apresEchange.
     var aE = serie.some(function (m) { return m.etape === 'E'; });
     var aB = serie.some(function (m) { return m.etape === 'B'; });
     var niveau = aE ? 3 : Math.max(aB ? 2 : 0, serie.length + (cycleRemis ? 1 : 0));
-    if (niveau >= 3) return { etat: 'dormant', dernier: dernier.jour };
-    if (niveau === 2) return age > cfg.delaiE ? { etat: 'E', dernier: dernier.jour } : { etat: 'attente', dernier: dernier.jour, du: plusJours(dernier.jour, cfg.delaiE + 1) };
-    return age > cfg.delaiB ? { etat: 'B', dernier: dernier.jour } : { etat: 'attente', dernier: dernier.jour, du: plusJours(dernier.jour, cfg.delaiB + 1) };
+    var r;
+    if (niveau >= 3) r = { etat: 'dormant' };
+    else if (niveau === 2) r = age > cfg.delaiE ? { etat: 'E' } : { etat: 'attente', du: plusJours(dernier.jour, cfg.delaiE + 1) };
+    else r = age > cfg.delaiB ? { etat: 'B' } : { etat: 'attente', du: plusJours(dernier.jour, cfg.delaiB + 1) };
+    r.dernier = dernier.jour;
+    r.apresEchange = echange;
+    return r;
   }
 
   // ---------- Construction du plan ----------
@@ -413,7 +418,10 @@
           }
           return;
         }
-        if (cycle.etat === 'echange') { ecartes.push(fusion(base(c), { motif: 'échange en cours, Laurent a écrit en dernier (' + cycle.dernier + ')' })); return; }
+        if (cycle.apresEchange && (c.statutFolk === 'Qualified' || c.statutFolk === 'Closed-won')) {
+          if (cycle.etat !== 'attente') ecartes.push(fusion(base(c), { motif: 'échange avancé (' + c.statutFolk + ' dans Folk) : pas de relance automatique' }));
+          return;
+        }
         if (cycle.etat === 'attente') return;
         if (cycle.etat === 'dormant') {
           if (c.statut !== 'dormant') clotures.push(fusion(base(c), { statut: 'Closed-lost', motif: 'dormant : prise de contact et 2 relances sans réponse', folkId: c.folkId || null }));
@@ -430,6 +438,12 @@
 
         if (cycle.etat === 'B' || cycle.etat === 'E' || cycle.etat === 'reset') {
           if (auTutoiement(fil.messages)) { aTraiter.push(fusion(base(c), { motif: 'fil au tutoiement : pas de texte figé', prevu: cycle.etat })); return; }
+          // Relance après un échange : le fil doit avoir été lu aujourd'hui, pas seulement mémorisé.
+          if (cycle.apresEchange && !fil.lu) {
+            filsALire.push(urn);
+            reportes.push(fusion(base(c), { motif: 'fil non lu (échange à relire avant relance)', prevu: cycle.etat === 'E' ? 'relance2' : 'relance1' }));
+            return;
+          }
           var duBacklog = cycle.etat === 'reset' && c.source === 'backlog' && !(c.envois || []).some(function (e) { return e.type !== 'INV' && e.type !== 'C'; });
           var item = { c: c, fil: fil, cycle: cycle };
           if (duBacklog) backlog.push(fusion(item, { etape: 'B' }));
@@ -477,6 +491,7 @@
       relances.forEach(function (r) {
         var e = r.cycle.etat === 'E' ? 'E' : 'B';
         var motif = r.cycle.etat === 'reset' ? 'cycle remis à zéro (dernier message du ' + r.cycle.dernier + ')'
+          : r.cycle.apresEchange ? 'échange resté sans réponse depuis le ' + r.cycle.dernier
           : e === 'B' ? 'prise de contact du ' + r.cycle.dernier + ' sans réponse' : 'relance 1 du ' + r.cycle.dernier + ' sans réponse';
         var a = composer(r.c, e, r.fil, e === 'E' ? 'relance2' : 'relance1', 'rel', motif);
         if (a) { ajouter(a); if (!r.fil.lu) filsALire.push(r.c.urn); }

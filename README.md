@@ -1,6 +1,6 @@
 # linkedin-cmf : moteur d'acquisition LinkedIn CMF
 
-Version 9.0.0 (2026-11-11). Auteur : Laurent Sebah (CMF).
+Version 9.0.1 (2026-11-11). Auteur : Laurent Sebah (CMF).
 
 Scripts de la tâche planifiée « Prospection LinkedIn CMF ». La tâche se fait en deux temps :
 
@@ -41,7 +41,7 @@ Aucun script de ce dépôt n'envoie de message, d'invitation ou d'acceptation. L
 npm test
 ```
 
-47 tests Node (dont les 15 cas d'acceptation du brief) et 18 tests Python. Aucune dépendance à installer. Node 20 ou plus, Python 3.10 ou plus.
+48 tests Node (dont les 15 cas d'acceptation du brief) et 18 tests Python. Aucune dépendance à installer. Node 20 ou plus, Python 3.10 ou plus.
 
 ## Préparer un lot
 
@@ -149,7 +149,7 @@ node migration/build_suivi.js --sendlog db/sendlog --watch db/watch --folk folk.
 - « Merci pour la connexion. » si la connexion a moins de 15 jours (distributeurs).
 
 Choix d'interprétation à connaître :
-- Échange où Laurent a écrit en dernier après une réponse du contact, de moins de 12 mois : aucune relance automatique (écarté, visible dans la page).
+- Échange où Laurent a écrit en dernier après une réponse du contact (consigne du 2026-11-11) : le fil est relu ; si ce dernier message est ancien et resté sans réponse, il se relance avec les mêmes délais (plus de 7 jours ► B, puis plus de 14 jours ► E, puis dormant). Exception : fiche Qualified ou Closed-won dans Folk, jamais de relance automatique.
 - Fil au tutoiement : aucun texte figé ne convient, le contact passe en « à traiter ».
 - « Société présente 3 fois ou plus dans le lot » : comptée sur les nouveaux prospects du jour (premiers messages, backlog, invitations), pour les deux familles ; les libellés génériques (« Indépendant », « CGP », « MUT ») ne comptent pas.
 - Deux contacts avec le même URN : ces contacts sont bloqués (bloc « Erreurs bloquantes »), le reste du lot est maintenu.
