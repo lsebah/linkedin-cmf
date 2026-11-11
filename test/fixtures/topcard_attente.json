@@ -1,0 +1,9 @@
+{
+  "data": { "*elements": ["urn:li:fsd_profile:ACoAAA333333FictifUrnGamma00000000000000"] },
+  "included": [
+    { "entityUrn": "urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000", "publicIdentifier": "laurent-fictif", "firstName": "Laurent", "lastName": "Fictif" },
+    { "entityUrn": "urn:li:fsd_profile:ACoAAA333333FictifUrnGamma00000000000000", "publicIdentifier": "carole-modele-0003", "firstName": "Carole", "lastName": "Modèle", "headline": "Family office, Paris" },
+    { "entityUrn": "urn:li:fsd_memberRelationship:ACoAAA333333FictifUrnGamma00000000000000", "memberRelationship": { "noConnection": { "memberDistance": "DISTANCE_2", "*invitation": "urn:li:fsd_invitation:7000000000000000001" } } },
+    { "entityUrn": "urn:li:fsd_invitation:7000000000000000001", "invitationType": "SENT", "invitationState": "PENDING" }
+  ]
+}

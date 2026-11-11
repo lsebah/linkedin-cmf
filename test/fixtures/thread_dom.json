@@ -1,0 +1,8 @@
+[
+  { "type": "date", "texte": "12 oct. 2025" },
+  { "type": "msg", "auteur": "Laurent Sebah", "heure": "09:15", "texte": "Bonjour Alice, je me permets de vous contacter." },
+  { "type": "date", "texte": "6 nov." },
+  { "type": "msg", "auteur": "", "heure": "10:02", "texte": "Bonjour Alice,\nJe me permets de revenir vers vous." },
+  { "type": "date", "texte": "vendredi" },
+  { "type": "msg", "auteur": "Alice Fictive", "heure": "18:40", "texte": "Bonjour, pouvez-vous m'en dire plus ?", "autre": true }
+]

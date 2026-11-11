@@ -1,0 +1,18 @@
+{ "data": { "messengerConversationsBySyncToken": { "elements": [
+  { "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000,2-AAAA==)", "lastActivityAt": 1794592800000, "unreadCount": 1,
+    "conversationParticipants": [
+      { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000", "participantType": { "member": { "firstName": { "text": "Laurent" }, "lastName": { "text": "Fictif" } } } },
+      { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAA111111FictifUrnAlpha00000000000000", "participantType": { "member": { "firstName": { "text": "Alice" }, "lastName": { "text": "Fictive" }, "profileUrl": "https://www.linkedin.com/in/alice-fictive-0001", "headline": { "text": "CGP" } } } } ],
+    "messages": { "elements": [ { "deliveredAt": 1794592800000, "body": { "text": "Bonjour, pouvez-vous m'en dire plus ?" }, "sender": { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAA111111FictifUrnAlpha00000000000000" } } ] } },
+  { "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000,2-BBBB==)", "lastActivityAt": 1794506400000, "unreadCount": 0,
+    "conversationParticipants": [
+      { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000" },
+      { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAA222222FictifUrnBeta000000000000000", "participantType": { "member": { "firstName": { "text": "Bruno" }, "lastName": { "text": "Exemple" } } } } ],
+    "messages": { "elements": [ { "deliveredAt": 1794506400000, "body": { "text": "Bonjour Monsieur Exemple," }, "sender": { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000" } } ] } },
+  { "entityUrn": "urn:li:msg_conversation:(urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000,2-CCCC==)", "lastActivityAt": 1794400000000,
+    "conversationParticipants": [
+      { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000" },
+      { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAA333333FictifUrnGamma00000000000000" },
+      { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAA444444FictifUrnDelta00000000000000" } ],
+    "messages": { "elements": [] } }
+] } } }

@@ -1,0 +1,9 @@
+{
+  "data": { "*elements": ["urn:li:fsd_connection:ACoAAA111111FictifUrnAlpha00000000000000", "urn:li:fsd_connection:ACoAAA222222FictifUrnBeta000000000000000"] },
+  "included": [
+    { "$type": "com.linkedin.voyager.dash.relationships.Connection", "entityUrn": "urn:li:fsd_connection:ACoAAA111111FictifUrnAlpha00000000000000", "createdAt": 1794297600000, "connectedMember": "urn:li:fsd_profile:ACoAAA111111FictifUrnAlpha00000000000000" },
+    { "$type": "com.linkedin.voyager.dash.relationships.Connection", "entityUrn": "urn:li:fsd_connection:ACoAAA222222FictifUrnBeta000000000000000", "createdAt": 1794211200000, "connectedMember": "urn:li:fsd_profile:ACoAAA222222FictifUrnBeta000000000000000" },
+    { "$type": "com.linkedin.voyager.dash.identity.profile.Profile", "entityUrn": "urn:li:fsd_profile:ACoAAA111111FictifUrnAlpha00000000000000", "firstName": "Alice", "lastName": "Fictive", "headline": "Conseillère en gestion de patrimoine indépendante", "publicIdentifier": "alice-fictive-0001" },
+    { "$type": "com.linkedin.voyager.dash.identity.profile.Profile", "entityUrn": "urn:li:fsd_profile:ACoAAA222222FictifUrnBeta000000000000000", "firstName": "Bruno", "lastName": "Exemple", "headline": "Directeur financier, Mutuelle Exemple", "publicIdentifier": "bruno-exemple-0002" }
+  ]
+}

@@ -1,0 +1,5 @@
+{ "data": { "messengerMessagesBySyncToken": { "elements": [
+  { "entityUrn": "urn:li:msg_message:(x,3)", "deliveredAt": 1794592800000, "body": { "text": "Bonjour, pouvez-vous m'en dire plus ?" }, "sender": { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAA111111FictifUrnAlpha00000000000000" } },
+  { "entityUrn": "urn:li:msg_message:(x,1)", "deliveredAt": 1792485000000, "body": { "text": "Bonjour Alice,\nChez CMF, je mets en concurrence..." }, "sender": { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000" } },
+  { "entityUrn": "urn:li:msg_message:(x,2)", "deliveredAt": 1793350000000, "body": { "text": "Bonjour Alice,\nJe me permets de revenir vers vous." }, "sender": { "hostIdentityUrn": "urn:li:fsd_profile:ACoAAABb3LgBFictifUrnDeLaurent0000000000" } }
+] } } }

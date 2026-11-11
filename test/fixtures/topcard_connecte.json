@@ -1,0 +1,6 @@
+{
+  "included": [
+    { "entityUrn": "urn:li:fsd_profile:ACoAAA444444FictifUrnDelta00000000000000", "publicIdentifier": "denis-specimen-0004", "firstName": "Denis", "lastName": "Spécimen", "headline": "Ancien directeur financier" },
+    { "entityUrn": "urn:li:fsd_memberRelationship:ACoAAA444444FictifUrnDelta00000000000000", "memberRelationship": { "*connection": "urn:li:fsd_connection:ACoAAA444444FictifUrnDelta00000000000000" }, "memberDistance": "DISTANCE_1" }
+  ]
+}
